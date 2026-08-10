@@ -135,13 +135,14 @@ export async function createRescheduleRequest(
 					note: input.note,
 					originalStartsAt: appointment.startsAt,
 					originalEndsAt: appointment.endsAt,
-					candidates: {
-						create: input.candidates.map((candidate) => ({
-							workspaceId: actor.workspaceId,
-							...candidate,
-						})),
-					},
 				},
+			});
+			await database.candidateSlot.createMany({
+				data: input.candidates.map((candidate) => ({
+					workspaceId: actor.workspaceId,
+					requestId: request.id,
+					...candidate,
+				})),
 			});
 			await database.notificationOutbox.create({
 				data: {
