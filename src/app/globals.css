@@ -31,7 +31,8 @@ body {
 button,
 a,
 input,
-textarea {
+textarea,
+select {
 	font: inherit;
 }
 
@@ -51,7 +52,8 @@ a {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+select:focus-visible {
 	outline: 3px solid rgba(53, 107, 101, 0.25);
 	outline-offset: 2px;
 }
@@ -131,13 +133,42 @@ textarea:focus-visible {
 }
 
 .error-banner {
-	margin: 0;
-	padding: 12px;
+	display: grid;
+	grid-template-columns: 20px 1fr 28px;
+	align-items: start;
+	gap: 10px;
+	margin: 0 0 16px;
+	padding: 12px 10px 12px 12px;
 	color: var(--danger);
 	background: var(--danger-soft);
 	border: 1px solid #efb9b6;
-	border-radius: 6px;
+	border-radius: 8px;
 	font-size: 0.82rem;
+}
+
+.error-banner p {
+	margin: 1px 0 0;
+}
+
+.error-banner > svg {
+	width: 18px;
+	height: 18px;
+}
+
+.error-banner button {
+	display: grid;
+	width: 28px;
+	height: 28px;
+	place-items: center;
+	margin-top: -5px;
+	color: var(--danger);
+	background: transparent;
+	border: 0;
+	border-radius: 5px;
+}
+
+.error-banner button svg {
+	width: 16px;
 }
 
 .app-shell {
@@ -233,6 +264,67 @@ textarea:focus-visible {
 	font-size: 1.5rem;
 	font-weight: 600;
 	letter-spacing: -0.025em;
+}
+
+.request-screen {
+	width: 100%;
+	max-width: 720px;
+}
+
+.screen-back {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0 0 20px;
+	padding: 4px 0;
+	color: var(--brand);
+	background: transparent;
+	border: 0;
+	font-size: 0.8rem;
+	font-weight: 600;
+}
+
+.screen-back svg {
+	width: 18px;
+}
+
+.request-heading {
+	margin-bottom: 20px;
+}
+
+.booking-summary {
+	margin-bottom: 12px;
+	padding: 18px 20px;
+	background: var(--paper);
+	border-radius: 16px;
+	box-shadow: 0 1px 3px rgba(24, 45, 42, 0.1);
+}
+
+.booking-summary h2 {
+	margin: 5px 0 14px;
+	font-size: 1rem;
+}
+
+.booking-summary dl {
+	display: grid;
+	gap: 8px;
+	margin: 0;
+}
+
+.booking-summary dl div {
+	display: grid;
+	grid-template-columns: 86px 1fr;
+	gap: 10px;
+	font-size: 0.78rem;
+}
+
+.booking-summary dt {
+	color: var(--muted);
+}
+
+.booking-summary dd {
+	margin: 0;
+	font-weight: 600;
 }
 
 .appointment-list,
@@ -354,8 +446,10 @@ textarea:focus-visible {
 }
 
 .request-form input,
-.request-form textarea {
+.request-form textarea,
+.request-form select {
 	width: 100%;
+	min-height: 44px;
 	padding: 10px 12px;
 	color: var(--text);
 	background: #fff;
@@ -363,15 +457,113 @@ textarea:focus-visible {
 	border-radius: 6px;
 }
 
+.request-form input:hover,
+.request-form textarea:hover,
+.request-form select:hover {
+	border-color: #aabcb8;
+}
+
 .request-form textarea {
 	min-height: 88px;
 	resize: vertical;
+}
+
+.candidate-fieldset {
+	position: relative;
+	display: grid;
+	gap: 14px;
+	margin: 0;
+	padding: 16px;
+	background: #f8faf9;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+}
+
+.candidate-fieldset legend {
+	padding: 0;
+	font-size: 0.82rem;
+	font-weight: 700;
+}
+
+.candidate-fields {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 12px;
+}
+
+.remove-candidate {
+	position: absolute;
+	top: 13px;
+	right: 16px;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 0;
+	color: var(--muted);
+	background: transparent;
+	border: 0;
+	font-size: 0.72rem;
+}
+
+.remove-candidate svg {
+	width: 14px;
 }
 
 .form-actions {
 	display: flex;
 	justify-content: flex-end;
 	gap: 8px;
+}
+
+.primary-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+}
+
+.button-spinner,
+.spinner {
+	animation: spin 700ms linear infinite;
+}
+
+.button-spinner {
+	width: 17px;
+}
+
+.loading-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	display: grid;
+	place-items: center;
+	padding: 20px;
+	background: rgba(241, 245, 244, 0.72);
+	backdrop-filter: blur(2px);
+}
+
+.loading-card {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 14px 18px;
+	color: var(--brand-dark);
+	background: #fff;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	box-shadow: 0 8px 30px rgba(24, 45, 42, 0.12);
+	font-size: 0.82rem;
+	font-weight: 700;
+}
+
+.loading-card svg {
+	width: 20px;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 .secondary-action {
@@ -602,6 +794,10 @@ textarea:focus-visible {
 
 	.candidate-list {
 		grid-template-columns: repeat(3, 1fr);
+	}
+
+	.candidate-fields {
+		grid-template-columns: minmax(0, 1.2fr) minmax(150px, 0.8fr);
 	}
 
 	.candidate-list button {

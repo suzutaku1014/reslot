@@ -10,8 +10,11 @@ test("customer request, provider decision, and admin delivery stay observable", 
 	await page.getByRole("button", { name: "日程を変更" }).first().click();
 	const candidate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000);
 	candidate.setHours(14, 0, 0, 0);
-	const localValue = `${candidate.getFullYear()}-${String(candidate.getMonth() + 1).padStart(2, "0")}-${String(candidate.getDate()).padStart(2, "0")}T14:00`;
-	await page.getByLabel("候補 1").fill(localValue);
+	const localDate = `${candidate.getFullYear()}-${String(candidate.getMonth() + 1).padStart(2, "0")}-${String(candidate.getDate()).padStart(2, "0")}`;
+	await expect(page.getByRole("heading", { name: "日程変更を申請" })).toBeVisible();
+	await expect(page.getByRole("heading", { name: "今後の予約" })).not.toBeVisible();
+	await page.getByLabel("候補 1の日付").fill(localDate);
+	await page.getByLabel("候補 1の開始時刻").selectOption("14:00");
 	await page.getByLabel("メモ（任意）").fill("架空の日程調整メモです。");
 	await page.getByRole("button", { name: "申請する" }).click();
 	await expect(page.getByRole("button", { name: "確認待ち" })).toBeVisible();
