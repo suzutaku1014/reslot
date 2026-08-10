@@ -1,6 +1,15 @@
 "use client";
 
-import { Bell, ChevronRight, Menu, X } from "lucide-react";
+import {
+	ArrowLeft,
+	Bell,
+	ChevronRight,
+	CircleAlert,
+	LoaderCircle,
+	Menu,
+	Trash2,
+	X,
+} from "lucide-react";
 import { useCallback, useState } from "react";
 
 type Role = "CUSTOMER" | "PROVIDER" | "ADMIN";
@@ -23,7 +32,7 @@ type RescheduleRequest = {
 	appointment: { id: string; providerId: string; service: { name: string } };
 	candidates: Array<{ id: string; startsAt: string; endsAt: string; status: string }>;
 };
-type CandidateDraft = { id: string; value: string };
+type CandidateDraft = { id: string; date: string; time: string };
 type Snapshot = {
 	role: Role;
 	customers: Array<{ id: string; displayName: string }>;
@@ -106,6 +115,27 @@ const errorLabels: Record<string, string> = {
 	OUTBOX_NOT_RETRYABLE: "この通知イベントは再試行できません。",
 };
 
+const timeOptions = Array.from({ length: 25 }, (_, index) => {
+	const minutes = 9 * 60 + index * 30;
+	const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
+	const remainder = String(minutes % 60).padStart(2, "0");
+	return `${hours}:${remainder}`;
+});
+
+const emptyCandidate = (id = crypto.randomUUID()): CandidateDraft => ({
+	id,
+	date: "",
+	time: "",
+});
+
+function dateInputValue(date: Date) {
+	return [
+		date.getFullYear(),
+		String(date.getMonth() + 1).padStart(2, "0"),
+		String(date.getDate()).padStart(2, "0"),
+	].join("-");
+}
+
 function translate(value: string, dictionary: Record<string, string>) {
 	return dictionary[value] ?? value;
 }
@@ -126,7 +156,7 @@ export function DemoApp() {
 	const [error, setError] = useState<string | null>(null);
 	const [selectedAppointment, setSelectedAppointment] = useState<string | null>(null);
 	const [candidateTimes, setCandidateTimes] = useState<CandidateDraft[]>([
-		{ id: "candidate-1", value: "" },
+		{ id: "candidate-1", date: "", time: "" },
 	]);
 	const [note, setNote] = useState("");
 	const [menuOpen, setMenuOpen] = useState(false);
@@ -168,11 +198,22 @@ export function DemoApp() {
 				}),
 			);
 			await refresh();
+			closeRequest();
 		}, "表示する役割を切り替えられませんでした。");
 	}
 
+	function closeRequest() {
+		setSelectedAppointment(null);
+		setCandidateTimes([{ id: "candidate-1", date: "", time: "" }]);
+		setNote("");
+		setError(null);
+	}
+
 	async function submitRequest() {
-		if (!selectedAppointment || candidateTimes.some((candidate) => !candidate.value))
+		if (
+			!selectedAppointment ||
+			candidateTimes.some((candidate) => !candidate.date || !candidate.time)
+		)
 			return;
 		await run(async () => {
 			await readJson(
@@ -186,7 +227,7 @@ export function DemoApp() {
 						appointmentId: selectedAppointment,
 						note: note || undefined,
 						candidates: candidateTimes.map((candidate) => {
-							const startsAt = new Date(candidate.value);
+							const startsAt = new Date(`${candidate.date}T${candidate.time}`);
 							return {
 								startsAt: startsAt.toISOString(),
 								endsAt: new Date(startsAt.getTime() + 3_600_000).toISOString(),
@@ -195,10 +236,8 @@ export function DemoApp() {
 					}),
 				}),
 			);
-			setSelectedAppointment(null);
-			setCandidateTimes([{ id: "candidate-1", value: "" }]);
-			setNote("");
 			await refresh();
+			closeRequest();
 		}, "日程変更を申請できませんでした。");
 	}
 
@@ -243,10 +282,22 @@ export function DemoApp() {
 		}, "通知を再試行できませんでした。");
 	}
 
-	if (!snapshot) return <Landing busy={busy} error={error} startDemo={startDemo} />;
+	if (!snapshot)
+		return (
+			<Landing
+				busy={busy}
+				error={error}
+				startDemo={startDemo}
+				dismissError={() => setError(null)}
+			/>
+		);
+
+	const selectedAppointmentData = snapshot.appointments.find(
+		(appointment) => appointment.id === selectedAppointment,
+	);
 
 	return (
-		<main className="app-shell">
+		<main className="app-shell" aria-busy={busy}>
 			<header className="app-header">
 				<span className="wordmark">ReSlot</span>
 				<button
@@ -287,61 +338,68 @@ export function DemoApp() {
 					</a>
 				</aside>
 				<section className="workspace">
-					<div className="workspace-heading">
-						<h1>
-							{snapshot.role === "ADMIN"
-								? "運用状況"
-								: snapshot.role === "PROVIDER"
-									? "日程変更の申請"
-									: "今後の予約"}
-						</h1>
-					</div>
-					{error && (
-						<p className="error-banner" role="alert">
-							{error}
-						</p>
-					)}
-					{snapshot.role === "ADMIN" ? (
-						<AdminOperations
-							snapshot={snapshot}
+					{selectedAppointmentData && snapshot.role === "CUSTOMER" ? (
+						<RequestScreen
+							appointment={selectedAppointmentData}
+							candidateTimes={candidateTimes}
+							setCandidateTimes={setCandidateTimes}
+							note={note}
+							setNote={setNote}
 							busy={busy}
-							processNow={processNow}
-							retryEvent={retryEvent}
+							error={error}
+							dismissError={() => setError(null)}
+							submit={submitRequest}
+							cancel={closeRequest}
 						/>
-					) : snapshot.role === "PROVIDER" ? (
-						<RequestInbox requests={snapshot.requests} busy={busy} decide={decide} />
 					) : (
-						<div className="appointment-list">
-							{snapshot.appointments.map((appointment) => (
-								<AppointmentCard
-									key={appointment.id}
-									appointment={appointment}
-									onRequest={() => setSelectedAppointment(appointment.id)}
-									hasPending={snapshot.requests.some(
-										(request) =>
-											request.appointment.id === appointment.id &&
-											request.status === "PENDING",
-									)}
-								/>
-							))}
-							{selectedAppointment && (
-								<RequestForm
-									candidateTimes={candidateTimes}
-									setCandidateTimes={setCandidateTimes}
-									note={note}
-									setNote={setNote}
+						<>
+							<div className="workspace-heading">
+								<h1>
+									{snapshot.role === "ADMIN"
+										? "運用状況"
+										: snapshot.role === "PROVIDER"
+											? "日程変更の申請"
+											: "今後の予約"}
+								</h1>
+							</div>
+							{error && <ErrorBanner message={error} dismiss={() => setError(null)} />}
+							{snapshot.role === "ADMIN" ? (
+								<AdminOperations
+									snapshot={snapshot}
 									busy={busy}
-									submit={submitRequest}
-									cancel={() => setSelectedAppointment(null)}
+									processNow={processNow}
+									retryEvent={retryEvent}
 								/>
+							) : snapshot.role === "PROVIDER" ? (
+								<RequestInbox
+									requests={snapshot.requests}
+									busy={busy}
+									decide={decide}
+								/>
+							) : (
+								<div className="appointment-list">
+									{snapshot.appointments.map((appointment) => (
+										<AppointmentCard
+											key={appointment.id}
+											appointment={appointment}
+											onRequest={() => setSelectedAppointment(appointment.id)}
+											hasPending={snapshot.requests.some(
+												(request) =>
+													request.appointment.id === appointment.id &&
+													request.status === "PENDING",
+											)}
+										/>
+									))}
+								</div>
 							)}
-						</div>
-					)}
-					{snapshot.role !== "ADMIN" && (
-						<Notifications items={snapshot.notifications} />
+							{snapshot.role !== "ADMIN" && (
+								<Notifications items={snapshot.notifications} />
+							)}
+						</>
 					)}
 				</section>
 			</div>
+			{busy && snapshot && <LoadingOverlay />}
 		</main>
 	);
 }
@@ -350,10 +408,12 @@ function Landing({
 	busy,
 	error,
 	startDemo,
+	dismissError,
 }: {
 	busy: boolean;
 	error: string | null;
 	startDemo: () => void;
+	dismissError: () => void;
 }) {
 	return (
 		<main className="landing-shell">
@@ -363,16 +423,35 @@ function Landing({
 			</header>
 			<section className="landing-card">
 				<h1>ReSlot</h1>
-				{error && (
-					<p className="error-banner" role="alert">
-						{error}
-					</p>
-				)}
+				{error && <ErrorBanner message={error} dismiss={dismissError} />}
 				<button type="button" onClick={startDemo} disabled={busy}>
 					{busy ? "準備しています…" : "デモをはじめる"}
 				</button>
 			</section>
 		</main>
+	);
+}
+
+function ErrorBanner({ message, dismiss }: { message: string; dismiss: () => void }) {
+	return (
+		<div className="error-banner" role="alert">
+			<CircleAlert aria-hidden="true" />
+			<p>{message}</p>
+			<button type="button" onClick={dismiss} aria-label="エラーを閉じる">
+				<X aria-hidden="true" />
+			</button>
+		</div>
+	);
+}
+
+function LoadingOverlay() {
+	return (
+		<div className="loading-overlay" role="status" aria-live="polite">
+			<div className="loading-card">
+				<LoaderCircle className="spinner" aria-hidden="true" />
+				<span>処理しています</span>
+			</div>
+		</div>
 	);
 }
 
@@ -530,6 +609,75 @@ function AppointmentCard({
 	);
 }
 
+function RequestScreen({
+	appointment,
+	candidateTimes,
+	setCandidateTimes,
+	note,
+	setNote,
+	busy,
+	error,
+	dismissError,
+	submit,
+	cancel,
+}: {
+	appointment: Appointment;
+	candidateTimes: CandidateDraft[];
+	setCandidateTimes: (values: CandidateDraft[]) => void;
+	note: string;
+	setNote: (value: string) => void;
+	busy: boolean;
+	error: string | null;
+	dismissError: () => void;
+	submit: () => void;
+	cancel: () => void;
+}) {
+	const currentDate = new Intl.DateTimeFormat("ja-JP", {
+		dateStyle: "long",
+		timeStyle: "short",
+	}).format(new Date(appointment.startsAt));
+
+	return (
+		<div className="request-screen">
+			<button className="screen-back" type="button" onClick={cancel} disabled={busy}>
+				<ArrowLeft aria-hidden="true" />
+				予約一覧へ戻る
+			</button>
+			<div className="workspace-heading request-heading">
+				<h1>日程変更を申請</h1>
+			</div>
+			{error && <ErrorBanner message={error} dismiss={dismissError} />}
+			<section className="booking-summary" aria-labelledby="current-booking-heading">
+				<p className="eyebrow">変更する予約</p>
+				<h2 id="current-booking-heading">
+					{appointment.service.name === "Project consultation"
+						? "プロジェクト相談"
+						: appointment.service.name}
+				</h2>
+				<dl>
+					<div>
+						<dt>現在の日時</dt>
+						<dd>{currentDate}</dd>
+					</div>
+					<div>
+						<dt>担当</dt>
+						<dd>{appointment.provider.displayName}</dd>
+					</div>
+				</dl>
+			</section>
+			<RequestForm
+				candidateTimes={candidateTimes}
+				setCandidateTimes={setCandidateTimes}
+				note={note}
+				setNote={setNote}
+				busy={busy}
+				submit={submit}
+				cancel={cancel}
+			/>
+		</div>
+	);
+}
+
 function RequestForm({
 	candidateTimes,
 	setCandidateTimes,
@@ -547,43 +695,97 @@ function RequestForm({
 	submit: () => void;
 	cancel: () => void;
 }) {
+	const tomorrow = new Date();
+	tomorrow.setDate(tomorrow.getDate() + 1);
+	const minimumDate = dateInputValue(tomorrow);
+	const isIncomplete = candidateTimes.some(
+		(candidate) => !candidate.date || !candidate.time,
+	);
+
 	return (
-		<section className="request-form" aria-label="新しい予約日時を申請">
+		<form
+			className="request-form"
+			aria-label="新しい予約日時を申請"
+			onSubmit={(event) => {
+				event.preventDefault();
+				submit();
+			}}
+		>
 			<div>
-				<p className="eyebrow">日程変更申請</p>
-				<h2>候補日時を入力してください</h2>
-				<p className="form-description">
-					候補は3つまで追加できます。各候補は1時間枠で登録されます。
-				</p>
+				<p className="eyebrow">希望日時</p>
+				<h2>候補日時を選択</h2>
+				<p className="form-description">候補は3つまで選べます。予約時間は1時間です。</p>
 			</div>
 			{candidateTimes.map((candidate, index) => (
-				<label key={candidate.id}>
-					候補 {index + 1}
-					<input
-						type="datetime-local"
-						value={candidate.value}
-						onChange={(event) =>
-							setCandidateTimes(
-								candidateTimes.map((current, currentIndex) =>
-									currentIndex === index
-										? { ...current, value: event.target.value }
-										: current,
-								),
-							)
-						}
-					/>
-				</label>
+				<fieldset className="candidate-fieldset" key={candidate.id}>
+					<legend>候補 {index + 1}</legend>
+					{candidateTimes.length > 1 && (
+						<button
+							className="remove-candidate"
+							type="button"
+							onClick={() =>
+								setCandidateTimes(
+									candidateTimes.filter((current) => current.id !== candidate.id),
+								)
+							}
+							aria-label={`候補 ${index + 1}を削除`}
+						>
+							<Trash2 aria-hidden="true" />
+							削除
+						</button>
+					)}
+					<div className="candidate-fields">
+						<label>
+							日付
+							<input
+								type="date"
+								min={minimumDate}
+								value={candidate.date}
+								onChange={(event) =>
+									setCandidateTimes(
+										candidateTimes.map((current) =>
+											current.id === candidate.id
+												? { ...current, date: event.target.value }
+												: current,
+										),
+									)
+								}
+								aria-label={`候補 ${index + 1}の日付`}
+								required
+							/>
+						</label>
+						<label>
+							開始時刻
+							<select
+								value={candidate.time}
+								onChange={(event) =>
+									setCandidateTimes(
+										candidateTimes.map((current) =>
+											current.id === candidate.id
+												? { ...current, time: event.target.value }
+												: current,
+										),
+									)
+								}
+								aria-label={`候補 ${index + 1}の開始時刻`}
+								required
+							>
+								<option value="">時刻を選択</option>
+								{timeOptions.map((time) => (
+									<option value={time} key={time}>
+										{time}
+									</option>
+								))}
+							</select>
+						</label>
+					</div>
+				</fieldset>
 			))}
 			{candidateTimes.length < 3 && (
 				<button
 					className="text-action"
 					type="button"
-					onClick={() =>
-						setCandidateTimes([
-							...candidateTimes,
-							{ id: `candidate-${candidateTimes.length + 1}`, value: "" },
-						])
-					}
+					onClick={() => setCandidateTimes([...candidateTimes, emptyCandidate()])}
 				>
 					＋ 候補を追加
 				</button>
@@ -603,14 +805,20 @@ function RequestForm({
 				</button>
 				<button
 					className="primary-action"
-					type="button"
-					onClick={submit}
-					disabled={busy || candidateTimes.some((candidate) => !candidate.value)}
+					type="submit"
+					disabled={busy || isIncomplete}
 				>
-					申請する
+					{busy ? (
+						<>
+							<LoaderCircle className="button-spinner" aria-hidden="true" />
+							申請中…
+						</>
+					) : (
+						"申請する"
+					)}
 				</button>
 			</div>
-		</section>
+		</form>
 	);
 }
 
