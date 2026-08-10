@@ -6,7 +6,11 @@ import {
 } from "@/server/auth/session";
 import { getDemoSnapshot } from "@/server/demo/snapshot";
 import { ApiError } from "@/server/http/errors";
-import { processOutbox, retryOutboxEvent } from "@/server/outbox/worker";
+import {
+	cleanupExpiredDemoSessions,
+	processOutbox,
+	retryOutboxEvent,
+} from "@/server/outbox/worker";
 import {
 	createRescheduleRequest,
 	resolveRescheduleRequest,
@@ -19,6 +23,7 @@ export const api = new OpenAPIHono<{ Variables: { requestId: string } }>().baseP
 api.use("*", async (context, next) => {
 	context.set("requestId", crypto.randomUUID());
 	context.header("X-Request-Id", context.get("requestId"));
+	context.header("Cache-Control", "no-store");
 	await next();
 });
 
@@ -95,7 +100,11 @@ api.post("/internal/outbox/process", async (context) => {
 	) {
 		throw new ApiError(401, "INVALID_CRON_SECRET", "Cron authorization failed.");
 	}
-	return context.json({ results: await processOutbox() });
+	const [results, cleanup] = await Promise.all([
+		processOutbox(),
+		cleanupExpiredDemoSessions(),
+	]);
+	return context.json({ results, expiredSessionsDeleted: cleanup.count });
 });
 
 const candidateSchema = z.object({

@@ -281,6 +281,9 @@ export function DemoApp() {
 							)}
 						</div>
 					)}
+					{snapshot.role !== "ADMIN" && (
+						<Notifications items={snapshot.notifications} />
+					)}
 				</section>
 			</div>
 		</main>
@@ -356,6 +359,32 @@ function Metric({ label, value }: { label: string; value: number }) {
 			<span>{label}</span>
 			<strong>{value}</strong>
 		</article>
+	);
+}
+
+function Notifications({ items }: { items: Snapshot["notifications"] }) {
+	return (
+		<section className="notification-panel" aria-labelledby="notifications-heading">
+			<div className="ops-heading">
+				<div>
+					<p className="eyebrow">In-app delivery</p>
+					<h2 id="notifications-heading">Notifications</h2>
+				</div>
+			</div>
+			{items.length === 0 ? (
+				<p className="muted-copy">No delivered notifications yet.</p>
+			) : (
+				items.map((item) => (
+					<article className="notification" key={item.id}>
+						<Bell aria-hidden="true" />
+						<div>
+							<strong>{item.title}</strong>
+							<p>{item.body}</p>
+						</div>
+					</article>
+				))
+			)}
+		</section>
 	);
 }
 

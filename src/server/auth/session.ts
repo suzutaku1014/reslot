@@ -24,6 +24,16 @@ export async function issueDemoSession(context: Context) {
 	const secondStart = new Date(initialStart.getTime() + 24 * 60 * 60 * 1_000);
 
 	const session = await prisma.$transaction(async (database) => {
+		const recentSessions = await database.demoSession.count({
+			where: { createdAt: { gte: new Date(now.getTime() - 60_000) } },
+		});
+		if (recentSessions >= 30) {
+			throw new ApiError(
+				429,
+				"DEMO_CAPACITY_REACHED",
+				"The public demo is busy. Please try again in a minute.",
+			);
+		}
 		const createdSession = await database.demoSession.create({
 			data: { tokenHash: hashToken(token), expiresAt },
 		});
