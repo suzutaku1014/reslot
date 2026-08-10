@@ -1,13 +1,7 @@
-# AI-assisted development
+# AI支援開発について
 
-ReSlot is developed with an AI coding agent under maintainer direction.
+ReSlotは、メンテナーの指示と判断のもとでAIコーディングエージェントを活用して開発しています。
 
-The maintainer owns product scope, risk acceptance, public release decisions,
-and the final explanation of the system. The agent may research, implement,
-test, document, and prepare pull requests. Generated work is accepted only
-after deterministic checks, focused review, and—where database behavior is
-involved—tests against real PostgreSQL.
+プロダクトの範囲、リスクの受容、公開判断、システムの最終的な説明責任はメンテナーが負います。AIエージェントは調査、実装、テスト、ドキュメント作成、Pull Requestの準備を支援します。生成された変更は、再現可能な検査、変更範囲を絞ったレビュー、データベース動作に関わる場合は実PostgreSQL上のテストを通過したものだけを採用します。
 
-The repository history intentionally preserves actual issues, pull requests,
-CI failures, and corrections. Commit dates, reviews, and development duration
-are not fabricated.
+リポジトリの履歴には、実際のIssue、Pull Request、CI失敗、修正過程を残しています。コミット日時、レビュー、開発期間を作為的に加工していません。

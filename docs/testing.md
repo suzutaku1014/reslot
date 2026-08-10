@@ -1,14 +1,13 @@
-# Verification strategy
+# テスト戦略
 
-| Layer | Purpose | Command |
+| レイヤー | 目的 | コマンド |
 | --- | --- | --- |
-| Static | Formatting, unsafe patterns, types | `pnpm lint && pnpm type-check` |
-| Unit | API contract and UI state | `pnpm test` |
-| Integration | Real PostgreSQL transactions and overlap behavior | `pnpm test:integration` |
-| Browser | Customer → Provider → Admin story | `pnpm test:e2e` |
-| Build | Next.js production compilation | `pnpm build` |
+| 静的検査 | フォーマット、危険なパターン、型 | `pnpm lint && pnpm type-check` |
+| 単体テスト | API契約とUI状態 | `pnpm test` |
+| 統合テスト | 実PostgreSQL上のトランザクションと予約重複 | `pnpm test:integration` |
+| ブラウザE2E | 利用者 → 担当者 → 管理者の一連の操作 | `pnpm test:e2e` |
+| ビルド | Next.jsの本番向けコンパイル | `pnpm build` |
 
-CI provisions disposable PostgreSQL 17, applies the committed migration, and runs
-all layers. The concurrency test deliberately races two provider decisions and
-asserts that only one commits. The migration adds a PostgreSQL exclusion
-constraint so correctness does not depend solely on an application-level query.
+CIは使い捨てのPostgreSQL 17を用意し、コミット済みのマイグレーションを適用して全レイヤーを実行します。
+
+競合テストでは2件の担当者回答を意図的に同時実行し、片方だけがコミットされることを検証します。マイグレーションでPostgreSQLの排他制約を追加しているため、正しさをアプリケーション側の事前クエリだけに依存させていません。

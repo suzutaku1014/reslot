@@ -1,27 +1,25 @@
-# Release checklist
+# リリースチェックリスト
 
-## Before merge
+## マージ前
 
-- The milestone contains an issue for every material change.
-- Pull requests explain risk, rollback, and validation.
-- CI, CodeQL, dependency review, and Vercel Preview are green.
-- The migration has been applied to an isolated database branch.
-- The browser flow passes without real personal data.
+- 重要な変更に対応するIssueがマイルストーンに登録されている
+- Pull Requestにリスク、ロールバック方法、検証内容が記載されている
+- CI、CodeQL、Dependency Review、Vercel Previewが成功している
+- 独立したデータベースブランチへマイグレーションを適用済みである
+- 実在する個人情報を使わずにブラウザフローが通過する
 
-## Production candidate
+## Production候補
 
-- Production environment contains `DATABASE_URL`, `DIRECT_URL`,
-  `SESSION_PEPPER`, `CRON_SECRET`, and `PUBLIC_APP_URL`.
-- Secrets differ from Preview and Local and are never copied into the repository.
-- `prisma migrate deploy` succeeds before application traffic uses the schema.
-- Health, demo issuance, role switching, rescheduling, delivery, and audit views
-  pass a production smoke test.
-- Security headers and secure cookie attributes are confirmed in the browser.
+- Production環境に`DATABASE_URL`、`DIRECT_URL`、`SESSION_PEPPER`、`CRON_SECRET`、`PUBLIC_APP_URL`が設定されている
+- ProductionのSecretがPreview・Localと異なり、リポジトリへ保存されていない
+- アプリケーションが新しいスキーマを使う前に`prisma migrate deploy`が成功する
+- ヘルスチェック、デモ発行、役割切り替え、日程変更、通知配信、監査画面のProduction Smoke Testが通過する
+- ブラウザでSecurity HeaderとSecure Cookie属性を確認している
 
-## Publish
+## 公開
 
-- Merge through the protected `main` branch.
-- Tag the exact reviewed commit as `v1.0.0`.
-- Create release notes from the changelog and link the live demo.
-- Watch deployment and function logs for the first maintenance interval.
-- Close the milestone only after the tagged production deployment is healthy.
+- 保護された`main`ブランチへPull Request経由でマージする
+- レビュー済みの正確なコミットへ`v1.0.0`タグを付ける
+- CHANGELOGからRelease Noteを作成し、公開デモへのリンクを掲載する
+- 最初のMaintenance Intervalが終わるまでデプロイとFunctionsログを監視する
+- タグ付きProductionデプロイの正常性を確認してからマイルストーンを閉じる

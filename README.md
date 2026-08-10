@@ -1,70 +1,94 @@
 # ReSlot
 
-ReSlot is a production-minded reference application for appointment
-rescheduling. A customer proposes new times, the assigned provider accepts or
-rejects the request, and an administrator can inspect delivery failures and an
-append-only audit trail.
+予約の日程変更を題材に、業務アプリで必要になる権限分離、整合性、非同期処理、監査を一つのフローで実装したオープンソースのリファレンスアプリです。
 
-The public demo uses expiring fictional workspaces. It does not collect real
-names, email addresses, payment information, or third-party credentials.
+利用者が候補日時を申請し、担当者が承認または却下します。管理者は通知の配信状態と追記専用の監査履歴を確認できます。
 
-## Portfolio goals
+公開デモは架空データだけを使う、登録不要の環境です。作成されたデモ用ワークスペースは1時間で失効します。実在する氏名、メールアドレス、決済情報、認証情報は収集しません。
 
-- Show one complete workflow across UI, API, PostgreSQL, and asynchronous work.
-- Make authorization, concurrency, idempotency, and failure recovery visible.
-- Publish the engineering controls used to test and release the application.
-- Keep the demo safe to operate anonymously on the public internet.
+## デモ
 
-## Roles
+[公開デモを開く](https://reslot-eight.vercel.app)
 
-| Role | Capability |
+1. 「デモをはじめる」を選択
+2. 利用者として予約の候補日時を申請
+3. 担当者へ切り替えて候補を承認または却下
+4. 管理者へ切り替えて通知キューと監査履歴を確認
+
+入力には架空の内容だけを使用してください。
+
+## 実装の見どころ
+
+- 利用者・担当者・管理者の役割とデータ範囲をサーバー側で検証
+- 日程変更、候補確定、監査記録、通知キュー追加をトランザクションで処理
+- Idempotency Keyとバージョン比較による二重送信・古い画面からの更新対策
+- PostgreSQLの排他制約による予約時間の重複防止
+- Transactional Outboxによる、業務更新と通知処理の分離
+- 通知失敗の記録、再試行、Dead Letter状態の可視化
+- 有効期限付きデモセッション、操作回数制限、自動削除
+- 実PostgreSQLを使った競合テストとブラウザE2E
+
+## 役割
+
+| 役割 | 操作 |
 | --- | --- |
-| Customer | View appointments and propose one to three replacement times |
-| Provider | Review assigned requests and accept one candidate or reject the request |
-| Admin | Inspect all requests, audit events, and notification delivery state |
+| 利用者 | 予約の確認、1〜3件の候補日時を指定した日程変更申請 |
+| 担当者 | 自分に割り当てられた申請の確認、候補の承認または却下 |
+| 管理者 | 申請数、通知キュー、再試行、監査イベントの確認 |
 
-## Status
+## 技術構成
 
-Try the fictional-data demo at [reslot-eight.vercel.app](https://reslot-eight.vercel.app).
-Release work is tracked in the
-[v1.0.0 milestone](https://github.com/suzutaku1014/reslot/milestone/1).
+| 領域 | 採用技術 |
+| --- | --- |
+| Web | Next.js 16 / React 19 / TypeScript |
+| API | Hono / Zod OpenAPI |
+| Database | PostgreSQL / Prisma 7 / Neon |
+| Test | Vitest / Testing Library / Playwright |
+| CI・運用 | GitHub Actions / CodeQL / Vercel / Vercel Cron |
 
-## Stack
+ブラウザからデータベースへ直接接続しないモジュラーモノリス構成です。Next.jsとHonoを同じデプロイ単位に置き、ドメインサービスとAPI契約を共有しています。v1では外部の認証・メッセージ配信サービスを必要としません。
 
-Next.js 16 and React 19 render the application. Hono owns same-origin HTTP
-contracts, Prisma 7 owns persistence, and Neon PostgreSQL enforces tenant and
-time-overlap boundaries. Vercel runs the web process and scheduled outbox
-maintenance. No external identity or messaging provider is required for v1.
+## ローカル起動
 
-## Local verification
+必要な環境はNode.js 22以上、pnpm 11、PostgreSQL 17です。
 
-Requirements are Node.js 24, pnpm 11, and PostgreSQL 17. Copy the variable names
-from `.env.example`, use local-only values, and point both database URLs at a
-disposable local database.
+`.env.example`に記載された変数名をローカル環境へ設定し、`DATABASE_URL`、`DATABASE_URL_UNPOOLED`、`DIRECT_URL`は破棄可能なローカルデータベースへ接続してください。秘密情報をリポジトリへコミットしないでください。
 
 ```bash
 pnpm install
 pnpm db:deploy
+pnpm dev
+```
+
+`http://localhost:3000`を開くとデモを実行できます。
+
+## 検証
+
+```bash
 pnpm lint
 pnpm type-check
 pnpm test
 pnpm test:integration
+pnpm build
 pnpm test:e2e
 ```
 
-Do not enter real personal data. Each browser demo creates fictional records and
-becomes inaccessible after one hour.
+CIでは使い捨てのPostgreSQL 17を起動し、マイグレーション、静的検査、単体テスト、統合テスト、ビルド、ブラウザE2Eを実行します。
 
-## Design documents
+## 設計資料
 
-- [Product brief](docs/product-brief.md)
-- [Architecture](docs/architecture.md)
-- [Threat model](docs/threat-model.md)
-- [Verification strategy](docs/testing.md)
-- [Operations runbook](docs/operations.md)
-- [Release checklist](docs/release-checklist.md)
-- [AI-assisted development](AI_USAGE.md)
+- [プロダクト概要](docs/product-brief.md)
+- [アーキテクチャ](docs/architecture.md)
+- [脅威モデル](docs/threat-model.md)
+- [テスト戦略](docs/testing.md)
+- [運用手順](docs/operations.md)
+- [リリースチェックリスト](docs/release-checklist.md)
+- [AI支援開発について](AI_USAGE.md)
+- [セキュリティポリシー](SECURITY.md)
+- [コントリビューションガイド](CONTRIBUTING.md)
 
-## License
+リリース作業は[v1.0.0マイルストーン](https://github.com/suzutaku1014/reslot/milestone/1)で追跡しています。
 
-[MIT](LICENSE)
+## ライセンス
+
+[MIT License](LICENSE)

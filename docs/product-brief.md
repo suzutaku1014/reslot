@@ -1,37 +1,30 @@
-# Product brief
+# プロダクト概要
 
-## Problem
+## 解決する課題
 
-Rescheduling an appointment is a small workflow with deceptively difficult
-boundaries: two people see different actions, proposed times can become stale,
-concurrent decisions can double-book a provider, and a successful database
-update can be followed by failed notification delivery.
+予約の日程変更は小さな業務フローに見えますが、異なる役割ごとの操作、候補日時の陳腐化、同時操作による二重予約、データ更新後の通知失敗など、複数の難しい境界を含みます。
 
-## v1 workflow
+ReSlotは、この一連の課題を小さく観察可能なアプリとして実装します。
 
-1. A customer opens one of their scheduled appointments.
-2. They submit one to three future candidate intervals and an optional note.
-3. The assigned provider accepts one candidate or rejects the request.
-4. Acceptance atomically updates the appointment, resolves the request,
-   dismisses other candidates, enqueues notifications, and records audit events.
-5. Customer and provider see the new appointment and in-app notification.
-6. An admin can inspect audit and delivery state but cannot rewrite history.
+## v1のフロー
 
-## Acceptance criteria
+1. 利用者が予約一覧から変更対象を選びます。
+2. 将来の候補日時を1〜3件と、任意のメモを送信します。
+3. 割り当てられた担当者が候補を1件承認するか、申請を却下します。
+4. 承認時は予約更新、申請の確定、他候補の却下、通知追加、監査記録を原子的に処理します。
+5. 利用者と担当者は新しい予約とアプリ内通知を確認できます。
+6. 管理者は監査・通知状態を確認できますが、履歴の書き換えはできません。
 
-- Customer, provider, and admin personas expose distinct authorized views.
-- A user cannot read or mutate another demo workspace by guessing identifiers.
-- A request can be resolved only once; stale and concurrent decisions return a
-  conflict without partial mutation.
-- A provider cannot be booked into overlapping active appointments.
-- Notification failure never rolls back an already committed reschedule and is
-  visible for retry.
-- The complete flow is covered by a browser test and real-PostgreSQL concurrency
-  tests.
-- The public demo accepts fictional data only and expires after one hour.
+## 受け入れ条件
 
-## Explicitly out of scope
+- 利用者、担当者、管理者に、それぞれ権限の異なる画面を提供すること
+- 識別子を推測しても、別のデモ用ワークスペースを読み書きできないこと
+- 申請は一度だけ確定でき、古い画面や同時操作は部分更新せず競合として返すこと
+- 担当者の有効な予約時間が重複しないこと
+- 通知失敗によって確定済みの日程変更を取り消さず、再試行可能な状態として確認できること
+- ブラウザE2Eと実PostgreSQL上の競合テストでフローを検証すること
+- 公開デモは架空データだけを受け付け、1時間後に失効すること
 
-Persistent accounts, organization invitations, payments, email, SMS, Slack,
-LINE, file uploads, arbitrary URLs, arbitrary webhooks, calendar sync, and AI
-generation are not part of v1.
+## v1の対象外
+
+永続アカウント、組織への招待、決済、メール、SMS、外部チャット、ファイルアップロード、任意URL、任意Webhook、カレンダー同期、AI生成はv1に含めません。

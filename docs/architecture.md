@@ -1,40 +1,34 @@
-# Architecture
+# アーキテクチャ
 
 ```text
-Browser
+ブラウザ
   -> Next.js App Router
-  -> same-origin /api route
+  -> 同一オリジンの /api ルート
   -> Hono API
-  -> domain services
+  -> ドメインサービス
   -> Prisma
   -> Neon PostgreSQL
 
 Vercel Cron
-  -> authenticated internal Hono route
-  -> atomic outbox claim
-  -> in-app notification adapter
+  -> 認証済みの内部Honoルート
+  -> Outboxイベントの原子的な取得
+  -> アプリ内通知アダプター
 ```
 
-ReSlot is a modular monolith. The browser never connects directly to the
-database. Next.js and Hono run in one deployment and share typed domain and
-contract packages without creating a second network service.
+ReSlotはモジュラーモノリスです。ブラウザはデータベースへ直接接続しません。Next.jsとHonoを一つのデプロイで実行し、別のネットワークサービスを増やさずに、型付けされたドメインとAPI契約を共有します。
 
-## Trust boundaries
+## 信頼境界
 
-- A random demo-session token is stored only in a secure, HTTP-only cookie.
-- Only the token hash is persisted.
-- The API resolves the active persona and workspace from the session; actor and
-  workspace identifiers are never trusted from request bodies.
-- Every business table carries a workspace identifier, and relations preserve
-  that scope.
-- Provider-time conflicts are enforced at the PostgreSQL boundary in addition
-  to application validation.
-- External effects are represented by an outbox row committed with business
-  state and delivered after commit.
+- ランダムなデモセッショントークンはSecure・HTTP-only Cookieだけに保存します。
+- データベースにはトークンのハッシュだけを保存します。
+- APIはセッションから現在の役割とワークスペースを解決し、リクエスト本文の操作者IDやワークスペースIDを信用しません。
+- すべての業務テーブルがワークスペースIDを持ち、リレーションでもその範囲を維持します。
+- 担当者の予約時間競合は、アプリケーションの検証に加えてPostgreSQL境界でも防止します。
+- 外部への作用はOutbox行として業務状態と同時にコミットし、コミット後に配信します。
 
-## Deployment environments
+## 環境の分離
 
-- Local uses fictional seed data in a local PostgreSQL database.
-- Each pull request uses an isolated Preview deployment and database branch.
-- Production is a public, fictional-data demo with short-lived workspaces.
-- Production credentials and data are never copied to Local or Preview.
+- LocalではローカルPostgreSQLと架空のSeedデータを使用します。
+- Pull Requestごとに独立したPreviewデプロイとデータベースブランチを使用します。
+- Productionは短時間だけ有効なワークスペースを使う、架空データ専用の公開デモです。
+- Productionの認証情報やデータをLocal・Previewへコピーしません。

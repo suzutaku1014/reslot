@@ -1,11 +1,9 @@
-# Contributing
+# コントリビューションガイド
 
-1. Open or link an issue with acceptance criteria.
-2. Use a focused branch and keep unrelated changes out of the pull request.
-3. Include the behavior change, validation performed, and unresolved risks in
-   the pull request description.
-4. Never commit secrets or real personal data.
-5. Add a regression test for bug fixes when practical.
+1. 受け入れ条件を記載したIssueを作成するか、既存Issueを関連付けてください。
+2. 変更範囲を絞ったブランチを使い、無関係な変更をPull Requestへ含めないでください。
+3. Pull Requestには動作の変更点、実施した検証、未解決のリスクを記載してください。
+4. 秘密情報や実在する個人のデータをコミットしないでください。
+5. 不具合修正では、可能な限り再発防止テストを追加してください。
 
-By contributing, you agree that your contribution is licensed under the MIT
-License.
+コントリビューションを行うことで、提出した変更がMIT Licenseで提供されることに同意したものとみなします。

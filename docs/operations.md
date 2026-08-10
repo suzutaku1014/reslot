@@ -1,41 +1,35 @@
-# Operations runbook
+# 運用手順
 
-## Service objectives
+## サービス目標
 
-- The public demo should return a successful health response in 99.5% of monthly checks.
-- A queued in-app notification should be delivered within two cron intervals.
-- No demo workspace should remain beyond its one-hour lifetime plus one cleanup interval.
+- 公開デモのヘルスチェックが月間99.5%成功すること
+- キューに追加されたアプリ内通知がCron 2回分の間隔以内に配信されること
+- デモ用ワークスペースが有効期限1時間とCleanup 1回分の間隔を超えて残らないこと
 
-These are portfolio targets, not a commercial SLA. Vercel availability, Neon limits,
-and the absence of an external pager constrain the guarantee.
+これらはポートフォリオ上の目標であり、商用SLAではありません。Vercelの可用性、Neonの利用上限、外部Pagerを持たないことから、保証範囲には制約があります。
 
-## Signals
+## 観測できる情報
 
-The admin workspace exposes request, outbox, attempt, dead-letter, and audit state.
-Every API response carries `X-Request-Id`; mutations persist it in the audit trail.
-Vercel function logs are searched by request ID. Database health is checked through
-`GET /api/health` plus a synthetic demo flow.
+管理者画面では申請、Outbox、試行回数、Dead Letter、監査状態を確認できます。すべてのAPIレスポンスに`X-Request-Id`を付与し、更新操作では同じIDを監査履歴へ保存します。Vercel FunctionsのログはRequest IDで検索します。
 
-## Delivery recovery
+データベースの正常性は`GET /api/health`と、架空データによる一連のデモ操作で確認します。
 
-1. Confirm the business transaction committed in the audit trail.
-2. Inspect the event error code and attempt count.
-3. Correct the payload or runtime fault before retrying a dead-letter event.
-4. Use the workspace-scoped Admin retry action.
-5. Verify exactly one in-app notification and a `DELIVERED` outbox state.
+## 通知失敗からの復旧
 
-Never reverse an accepted appointment merely because its notification failed.
+1. 監査履歴で業務トランザクションがコミット済みか確認します。
+2. イベントのエラーコードと試行回数を確認します。
+3. Dead Letterイベントを再試行する前に、Payloadまたは実行環境の問題を修正します。
+4. 対象ワークスペースの管理者画面から再試行します。
+5. アプリ内通知が1件だけ作成され、Outboxが`DELIVERED`になったことを確認します。
 
-## Deployment and rollback
+通知が失敗したことだけを理由に、承認済みの予約変更を取り消してはいけません。
 
-Pull requests must pass CI and a Vercel Preview before merge. Production deploys
-from `main`. For an application regression, promote the last healthy Vercel
-deployment and open a follow-up fix. Database migrations are forward-only; a
-destructive schema change requires an expand/migrate/contract sequence and a
-tested data backup. Do not roll application code behind an incompatible schema.
+## デプロイとロールバック
 
-## Data lifecycle
+Pull Requestは、マージ前にCIとVercel Previewを通過する必要があります。Productionは`main`からデプロイします。
 
-Demo sessions contain fictional names only. The hourly maintenance job deletes
-expired sessions; database cascades remove their workspaces, appointments,
-requests, notifications, idempotency rows, outbox rows, and audit rows.
+アプリケーションの回帰が発生した場合は、最後に正常だったVercelデプロイをProductionへ昇格し、修正用Pull Requestを作成します。データベースマイグレーションはForward-onlyです。破壊的なスキーマ変更では、Expand / Migrate / Contractの順序と、復元テスト済みのバックアップが必要です。互換性のない古いスキーマへアプリケーションだけを戻してはいけません。
+
+## データライフサイクル
+
+デモセッションは架空の氏名だけを保持します。1時間ごとのMaintenance Jobが期限切れセッションを削除し、データベースのCascadeによってワークスペース、予約、申請、通知、冪等性レコード、Outbox、監査レコードも削除します。
