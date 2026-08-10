@@ -6,6 +6,10 @@ import {
 } from "@/server/auth/session";
 import { getDemoSnapshot } from "@/server/demo/snapshot";
 import { ApiError } from "@/server/http/errors";
+import {
+	createRescheduleRequest,
+	resolveRescheduleRequest,
+} from "@/server/rescheduling/service";
 
 export const api = new OpenAPIHono<{ Variables: { requestId: string } }>().basePath(
 	"/api",
@@ -51,6 +55,106 @@ api.openapi(
 		},
 	}),
 	(context) => context.json({ status: "ok" as const }, 200),
+);
+
+const candidateSchema = z.object({
+	startsAt: z.iso.datetime(),
+	endsAt: z.iso.datetime(),
+});
+const idempotencyHeader = z.string().min(8).max(100);
+
+api.openapi(
+	createRoute({
+		method: "post",
+		path: "/reschedule-requests",
+		request: {
+			headers: z.object({ "idempotency-key": idempotencyHeader }),
+			body: {
+				content: {
+					"application/json": {
+						schema: z.object({
+							appointmentId: z.string().uuid(),
+							note: z.string().trim().max(500).optional(),
+							candidates: z.array(candidateSchema).min(1).max(3),
+						}),
+					},
+				},
+			},
+		},
+		responses: {
+			201: { description: "Reschedule request created" },
+			409: { description: "Conflict" },
+			422: { description: "Invalid candidates" },
+		},
+	}),
+	async (context) => {
+		const session = await requireDemoSession(context);
+		const body = context.req.valid("json");
+		const response = await createRescheduleRequest(
+			{
+				workspaceId: session.workspace.id,
+				role: session.activeRole,
+				requestId: context.get("requestId"),
+			},
+			{
+				...body,
+				candidates: body.candidates.map(
+					(candidate: { startsAt: string; endsAt: string }) => ({
+						startsAt: new Date(candidate.startsAt),
+						endsAt: new Date(candidate.endsAt),
+					}),
+				),
+			},
+			context.req.valid("header")["idempotency-key"],
+		);
+		return context.json(response, 201);
+	},
+);
+
+api.openapi(
+	createRoute({
+		method: "post",
+		path: "/reschedule-requests/{requestId}/decision",
+		request: {
+			params: z.object({ requestId: z.string().uuid() }),
+			headers: z.object({ "idempotency-key": idempotencyHeader }),
+			body: {
+				content: {
+					"application/json": {
+						schema: z.discriminatedUnion("decision", [
+							z.object({
+								decision: z.literal("accept"),
+								candidateId: z.string().uuid(),
+								expectedVersion: z.number().int().positive(),
+							}),
+							z.object({
+								decision: z.literal("reject"),
+								expectedVersion: z.number().int().positive(),
+							}),
+						]),
+					},
+				},
+			},
+		},
+		responses: {
+			200: { description: "Request resolved" },
+			409: { description: "Stale or conflicting decision" },
+		},
+	}),
+	async (context) => {
+		const session = await requireDemoSession(context);
+		const body = context.req.valid("json");
+		const response = await resolveRescheduleRequest(
+			{
+				workspaceId: session.workspace.id,
+				role: session.activeRole,
+				requestId: context.get("requestId"),
+			},
+			{ requestId: context.req.valid("param").requestId, ...body },
+			context.req.valid("header")["idempotency-key"],
+		);
+		return context.json(response, 200);
+	},
 );
 
 const roleSchema = z.enum(["CUSTOMER", "PROVIDER", "ADMIN"]);

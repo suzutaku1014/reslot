@@ -19,6 +19,7 @@ const snapshot = {
 		},
 	],
 	notifications: [],
+	requests: [],
 	_count: { requests: 0, outbox: 0, auditEvents: 1 },
 };
 
