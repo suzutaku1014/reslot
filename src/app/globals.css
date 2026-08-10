@@ -17,7 +17,6 @@
 	--danger: #b94343;
 	--danger-pale: #fcecec;
 	--success: #287359;
-	--shadow: 0 12px 32px rgba(39, 65, 60, 0.08);
 	font-family:
 		var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
 }
@@ -191,11 +190,6 @@ textarea:focus-visible {
 	background: var(--brand-dark);
 }
 
-.actions span {
-	color: var(--ink-soft);
-	font-size: 0.76rem;
-}
-
 .hero-preview {
 	overflow: hidden;
 	min-height: 385px;
@@ -291,45 +285,6 @@ textarea:focus-visible {
 .preview-content p:last-child {
 	height: 56px;
 	margin: 0;
-}
-
-.trust-grid {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	margin-bottom: 56px;
-	background: var(--paper);
-	border: 1px solid var(--line);
-	border-radius: 12px;
-	box-shadow: var(--shadow);
-}
-
-.trust-grid article {
-	display: grid;
-	grid-template-columns: 28px 1fr;
-	gap: 6px 13px;
-	min-height: 132px;
-	padding: 25px;
-	border-right: 1px solid var(--line);
-}
-
-.trust-grid article:last-child {
-	border: 0;
-}
-
-.trust-grid svg {
-	grid-row: 1 / 3;
-	width: 20px;
-	color: var(--brand);
-}
-
-.trust-grid strong {
-	font-size: 0.88rem;
-}
-
-.trust-grid span {
-	color: var(--ink-soft);
-	font-size: 0.75rem;
-	line-height: 1.7;
 }
 
 .error-banner {
@@ -974,15 +929,8 @@ textarea:focus-visible {
 		height: 48px;
 	}
 
-	.trust-grid,
 	.metrics {
 		grid-template-columns: 1fr;
-	}
-
-	.trust-grid article {
-		min-height: 112px;
-		border-right: 0;
-		border-bottom: 1px solid var(--line);
 	}
 
 	.workspace-heading {

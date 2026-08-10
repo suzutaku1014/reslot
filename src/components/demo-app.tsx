@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CalendarDays, Database, ShieldCheck } from "lucide-react";
+import { Bell, CalendarDays } from "lucide-react";
 import { useCallback, useState } from "react";
 
 type Role = "CUSTOMER" | "PROVIDER" | "ADMIN";
@@ -371,7 +371,6 @@ function Landing({
 			</nav>
 			<section className="hero">
 				<div className="hero-copy">
-					<p className="eyebrow">オープンソースの業務アプリ実装例</p>
 					<h1>
 						日程変更を、
 						<br />
@@ -385,7 +384,6 @@ function Landing({
 						<button type="button" onClick={startDemo} disabled={busy}>
 							{busy ? "準備しています…" : "デモをはじめる"}
 						</button>
-						<span>登録不要・データは1時間で自動削除</span>
 					</div>
 					{error && (
 						<p className="error-banner" role="alert">
@@ -413,23 +411,6 @@ function Landing({
 						</div>
 					</div>
 				</div>
-			</section>
-			<section className="trust-grid" aria-label="技術的な特長">
-				<article>
-					<ShieldCheck aria-hidden="true" />
-					<strong>安全な権限分離</strong>
-					<span>セッション、役割、データ範囲をサーバー側で検証します。</span>
-				</article>
-				<article>
-					<Database aria-hidden="true" />
-					<strong>一貫したデータ更新</strong>
-					<span>予約、監査ログ、通知キューをひとつの処理で確定します。</span>
-				</article>
-				<article>
-					<Bell aria-hidden="true" />
-					<strong>追跡できる通知</strong>
-					<span>通知の成功・失敗を記録し、安全に再試行できます。</span>
-				</article>
 			</section>
 		</main>
 	);
