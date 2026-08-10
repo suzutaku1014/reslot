@@ -11,4 +11,3 @@ playwright-report/
 src/generated/
 .DS_Store
 *.tsbuildinfo
-.vercel
