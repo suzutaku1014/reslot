@@ -26,6 +26,23 @@ export async function getDemoSnapshot(workspaceId: string, role: PersonaRole) {
 				take: 10,
 				select: { id: true, title: true, body: true, readAt: true, createdAt: true },
 			},
+			requests: {
+				orderBy: { createdAt: "desc" },
+				select: {
+					id: true,
+					status: true,
+					note: true,
+					version: true,
+					createdAt: true,
+					appointment: {
+						select: { id: true, providerId: true, service: { select: { name: true } } },
+					},
+					candidates: {
+						orderBy: { startsAt: "asc" },
+						select: { id: true, startsAt: true, endsAt: true, status: true },
+					},
+				},
+			},
 			_count: { select: { requests: true, outbox: true, auditEvents: true } },
 		},
 	});
