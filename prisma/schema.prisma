@@ -48,6 +48,9 @@ model DemoSession {
   lastSeenAt DateTime    @default(now()) @db.Timestamptz(6)
   createdAt  DateTime    @default(now()) @db.Timestamptz(6)
   workspace  Workspace?
+
+  @@index([expiresAt])
+  @@index([createdAt])
 }
 
 model Workspace {

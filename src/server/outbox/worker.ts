@@ -139,3 +139,7 @@ export async function retryOutboxEvent(
 		return updated.count === 1;
 	});
 }
+
+export async function cleanupExpiredDemoSessions() {
+	return prisma.demoSession.deleteMany({ where: { expiresAt: { lt: new Date() } } });
+}

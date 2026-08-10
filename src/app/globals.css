@@ -445,6 +445,29 @@ a {
 	display: grid;
 	gap: 18px;
 }
+.notification-panel {
+	margin-top: 18px;
+	padding: 22px;
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-radius: 10px;
+}
+.notification {
+	display: grid;
+	grid-template-columns: 24px 1fr;
+	gap: 12px;
+	padding: 13px 0;
+	border-top: 1px solid var(--line);
+}
+.notification svg {
+	width: 18px;
+	color: var(--accent);
+}
+.notification p {
+	margin: 4px 0 0;
+	color: var(--muted);
+	font-size: 0.78rem;
+}
 .ops-section {
 	padding: 22px;
 	background: var(--surface);
