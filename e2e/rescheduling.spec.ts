@@ -4,34 +4,30 @@ test("customer request, provider decision, and admin delivery stay observable", 
 	page,
 }) => {
 	await page.goto("/");
-	await page.getByRole("button", { name: "Start fictional demo" }).click();
-	await expect(
-		page.getByRole("heading", { name: "Upcoming appointments" }),
-	).toBeVisible();
+	await page.getByRole("button", { name: "デモをはじめる" }).click();
+	await expect(page.getByRole("heading", { name: "今後の予約" })).toBeVisible();
 
-	await page.getByRole("button", { name: "Request change" }).first().click();
+	await page.getByRole("button", { name: "日程を変更" }).first().click();
 	const candidate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000);
 	candidate.setHours(14, 0, 0, 0);
 	const localValue = `${candidate.getFullYear()}-${String(candidate.getMonth() + 1).padStart(2, "0")}-${String(candidate.getDate()).padStart(2, "0")}T14:00`;
-	await page.getByLabel("Candidate 1").fill(localValue);
-	await page.getByLabel("Optional note").fill("A fictional scheduling note.");
-	await page.getByRole("button", { name: "Send request" }).click();
-	await expect(page.getByRole("button", { name: "Pending" })).toBeVisible();
+	await page.getByLabel("候補 1").fill(localValue);
+	await page.getByLabel("メモ（任意）").fill("架空の日程調整メモです。");
+	await page.getByRole("button", { name: "申請する" }).click();
+	await expect(page.getByRole("button", { name: "確認待ち" })).toBeVisible();
 
-	await page.getByRole("button", { name: "Provider Review candidates" }).click();
-	await expect(page.getByRole("heading", { name: "Change requests" })).toBeVisible();
+	await page.getByRole("button", { name: "担当者 候補日時を確認" }).click();
+	await expect(page.getByRole("heading", { name: "日程変更の申請" })).toBeVisible();
 	await page
-		.getByRole("button", { name: /Accept/ })
+		.getByRole("button", { name: /この日時で承認/ })
 		.first()
 		.click();
 	await expect(
-		page.getByRole("heading", { name: "No requests waiting" }),
+		page.getByRole("heading", { name: "確認待ちの申請はありません" }),
 	).toBeVisible();
 
-	await page.getByRole("button", { name: "Admin Inspect operations" }).click();
-	await expect(
-		page.getByRole("heading", { name: "Notification outbox" }),
-	).toBeVisible();
-	await page.getByRole("button", { name: "Process now" }).click();
-	await expect(page.getByText("DELIVERED").first()).toBeVisible();
+	await page.getByRole("button", { name: "管理者 運用状況を確認" }).click();
+	await expect(page.getByRole("heading", { name: "通知キュー" })).toBeVisible();
+	await page.getByRole("button", { name: "今すぐ処理" }).click();
+	await expect(page.getByText("配信済み").first()).toBeVisible();
 });
