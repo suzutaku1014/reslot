@@ -36,7 +36,7 @@ jobs:
       SESSION_PEPPER: ci-only-pepper-with-at-least-thirty-two-characters
       CRON_SECRET: ci-only-cron-secret-with-at-least-thirty-two-characters
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 11.16.0
@@ -60,5 +60,5 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/dependency-review-action@v4
