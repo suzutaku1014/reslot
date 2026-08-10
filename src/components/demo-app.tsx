@@ -37,6 +37,23 @@ type Snapshot = {
 		readAt: string | null;
 		createdAt: string;
 	}>;
+	outbox: Array<{
+		id: string;
+		eventType: string;
+		status: string;
+		attemptCount: number;
+		lastErrorCode: string | null;
+		createdAt: string;
+	}>;
+	auditEvents: Array<{
+		id: string;
+		actorRole: Role;
+		action: string;
+		resourceType: string;
+		resourceId: string;
+		requestId: string;
+		createdAt: string;
+	}>;
 	_count: { requests: number; outbox: number; auditEvents: number };
 };
 
@@ -157,6 +174,22 @@ export function DemoApp() {
 		}, "The decision could not be saved.");
 	}
 
+	async function processNow() {
+		await run(async () => {
+			await readJson(await fetch("/api/admin/outbox/process", { method: "POST" }));
+			await refresh();
+		}, "The outbox could not be processed.");
+	}
+
+	async function retryEvent(outboxId: string) {
+		await run(async () => {
+			await readJson(
+				await fetch(`/api/admin/outbox/${outboxId}/retry`, { method: "POST" }),
+			);
+			await refresh();
+		}, "The event could not be retried.");
+	}
+
 	if (!snapshot) return <Landing busy={busy} error={error} startDemo={startDemo} />;
 
 	return (
@@ -213,11 +246,12 @@ export function DemoApp() {
 						</p>
 					)}
 					{snapshot.role === "ADMIN" ? (
-						<div className="metrics">
-							<Metric label="Reschedule requests" value={snapshot._count.requests} />
-							<Metric label="Outbox events" value={snapshot._count.outbox} />
-							<Metric label="Audit events" value={snapshot._count.auditEvents} />
-						</div>
+						<AdminOperations
+							snapshot={snapshot}
+							busy={busy}
+							processNow={processNow}
+							retryEvent={retryEvent}
+						/>
 					) : snapshot.role === "PROVIDER" ? (
 						<RequestInbox requests={snapshot.requests} busy={busy} decide={decide} />
 					) : (
@@ -322,6 +356,85 @@ function Metric({ label, value }: { label: string; value: number }) {
 			<span>{label}</span>
 			<strong>{value}</strong>
 		</article>
+	);
+}
+
+function AdminOperations({
+	snapshot,
+	busy,
+	processNow,
+	retryEvent,
+}: {
+	snapshot: Snapshot;
+	busy: boolean;
+	processNow: () => void;
+	retryEvent: (id: string) => void;
+}) {
+	return (
+		<div className="operations">
+			<div className="metrics">
+				<Metric label="Reschedule requests" value={snapshot._count.requests} />
+				<Metric label="Outbox events" value={snapshot._count.outbox} />
+				<Metric label="Audit events" value={snapshot._count.auditEvents} />
+			</div>
+			<section className="ops-section">
+				<div className="ops-heading">
+					<div>
+						<p className="eyebrow">Delivery</p>
+						<h2>Notification outbox</h2>
+					</div>
+					<button
+						className="primary-action"
+						type="button"
+						disabled={busy || snapshot.outbox.length === 0}
+						onClick={processNow}
+					>
+						Process now
+					</button>
+				</div>
+				{snapshot.outbox.length === 0 ? (
+					<p className="muted-copy">No delivery events yet.</p>
+				) : (
+					<div className="ops-table">
+						{snapshot.outbox.map((event) => (
+							<div className="ops-row" key={event.id}>
+								<span>{event.eventType}</span>
+								<code>{event.status}</code>
+								<small>
+									{event.attemptCount} attempt{event.attemptCount === 1 ? "" : "s"}
+								</small>
+								{["FAILED", "DEAD_LETTER"].includes(event.status) && (
+									<button
+										className="text-action"
+										type="button"
+										onClick={() => retryEvent(event.id)}
+									>
+										Retry
+									</button>
+								)}
+							</div>
+						))}
+					</div>
+				)}
+			</section>
+			<section className="ops-section">
+				<div className="ops-heading">
+					<div>
+						<p className="eyebrow">Immutable trail</p>
+						<h2>Recent audit events</h2>
+					</div>
+				</div>
+				<div className="ops-table">
+					{snapshot.auditEvents.map((event) => (
+						<div className="ops-row audit" key={event.id}>
+							<span>{event.action}</span>
+							<code>{event.actorRole}</code>
+							<small>{event.requestId.slice(0, 8)}</small>
+						</div>
+					))}
+				</div>
+			</section>
+		</div>
 	);
 }
 
