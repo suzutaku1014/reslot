@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PersonaRole {
+  CUSTOMER
+  PROVIDER
+  ADMIN
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+enum RescheduleStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum CandidateStatus {
+  PROPOSED
+  SELECTED
+  DISMISSED
+}
+
+enum OutboxStatus {
+  QUEUED
+  PROCESSING
+  DELIVERED
+  FAILED
+  DEAD_LETTER
+}
+
+model DemoSession {
+  id         String      @id @default(uuid())
+  tokenHash  String      @unique @db.VarChar(64)
+  activeRole PersonaRole @default(CUSTOMER)
+  expiresAt  DateTime    @db.Timestamptz(6)
+  lastSeenAt DateTime    @default(now()) @db.Timestamptz(6)
+  createdAt  DateTime    @default(now()) @db.Timestamptz(6)
+  workspace  Workspace?
+}
+
+model Workspace {
+  id              String               @id @default(uuid())
+  sessionId       String               @unique
+  session         DemoSession          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt       DateTime             @default(now()) @db.Timestamptz(6)
+  customers       Customer[]
+  providers       Provider[]
+  services        Service[]
+  appointments    Appointment[]
+  requests        RescheduleRequest[]
+  candidates      CandidateSlot[]
+  notifications   InAppNotification[]
+  outbox          NotificationOutbox[]
+  auditEvents     AuditEvent[]
+  idempotencyKeys IdempotencyKey[]
+}
+
+model Customer {
+  id            String              @id @default(uuid())
+  workspaceId   String
+  workspace     Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  displayName   String              @db.VarChar(80)
+  appointments  Appointment[]
+  requests      RescheduleRequest[]
+  notifications InAppNotification[]
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId])
+}
+
+model Provider {
+  id            String              @id @default(uuid())
+  workspaceId   String
+  workspace     Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  displayName   String              @db.VarChar(80)
+  appointments  Appointment[]
+  notifications InAppNotification[]
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId])
+}
+
+model Service {
+  id              String        @id @default(uuid())
+  workspaceId     String
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name            String        @db.VarChar(120)
+  durationMinutes Int
+  appointments    Appointment[]
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId])
+}
+
+model Appointment {
+  id          String              @id @default(uuid())
+  workspaceId String
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    Customer            @relation(fields: [workspaceId, customerId], references: [workspaceId, id])
+  providerId  String
+  provider    Provider            @relation(fields: [workspaceId, providerId], references: [workspaceId, id])
+  serviceId   String
+  service     Service             @relation(fields: [workspaceId, serviceId], references: [workspaceId, id])
+  startsAt    DateTime            @db.Timestamptz(6)
+  endsAt      DateTime            @db.Timestamptz(6)
+  timezone    String              @default("Asia/Tokyo") @db.VarChar(64)
+  status      AppointmentStatus   @default(SCHEDULED)
+  version     Int                 @default(1)
+  createdAt   DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime            @updatedAt @db.Timestamptz(6)
+  requests    RescheduleRequest[]
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId, customerId, startsAt])
+  @@index([workspaceId, providerId, startsAt])
+}
+
+model RescheduleRequest {
+  id                  String           @id @default(uuid())
+  workspaceId         String
+  workspace           Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  appointmentId       String
+  appointment         Appointment      @relation(fields: [workspaceId, appointmentId], references: [workspaceId, id])
+  customerId          String
+  customer            Customer         @relation(fields: [workspaceId, customerId], references: [workspaceId, id])
+  status              RescheduleStatus @default(PENDING)
+  note                String?          @db.VarChar(500)
+  originalStartsAt    DateTime         @db.Timestamptz(6)
+  originalEndsAt      DateTime         @db.Timestamptz(6)
+  selectedCandidateId String?          @unique
+  version             Int              @default(1)
+  resolvedAt          DateTime?        @db.Timestamptz(6)
+  createdAt           DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime         @updatedAt @db.Timestamptz(6)
+  candidates          CandidateSlot[]  @relation("RequestCandidates")
+  selectedCandidate   CandidateSlot?   @relation("SelectedCandidate", fields: [selectedCandidateId], references: [id])
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId, status, createdAt])
+  @@index([appointmentId, status])
+}
+
+model CandidateSlot {
+  id          String             @id @default(uuid())
+  workspaceId String
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  requestId   String
+  request     RescheduleRequest  @relation("RequestCandidates", fields: [workspaceId, requestId], references: [workspaceId, id], onDelete: Cascade)
+  selectedBy  RescheduleRequest? @relation("SelectedCandidate")
+  startsAt    DateTime           @db.Timestamptz(6)
+  endsAt      DateTime           @db.Timestamptz(6)
+  status      CandidateStatus    @default(PROPOSED)
+  createdAt   DateTime           @default(now()) @db.Timestamptz(6)
+
+  @@unique([workspaceId, id])
+  @@unique([requestId, startsAt, endsAt])
+  @@index([workspaceId, requestId])
+}
+
+model InAppNotification {
+  id          String      @id @default(uuid())
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer?   @relation(fields: [workspaceId, customerId], references: [workspaceId, id])
+  providerId  String?
+  provider    Provider?   @relation(fields: [workspaceId, providerId], references: [workspaceId, id])
+  role        PersonaRole
+  type        String      @db.VarChar(80)
+  title       String      @db.VarChar(160)
+  body        String      @db.VarChar(500)
+  readAt      DateTime?   @db.Timestamptz(6)
+  createdAt   DateTime    @default(now()) @db.Timestamptz(6)
+
+  @@index([workspaceId, role, createdAt])
+}
+
+model NotificationOutbox {
+  id             String       @id @default(uuid())
+  workspaceId    String
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  dedupeKey      String       @unique @db.VarChar(180)
+  eventType      String       @db.VarChar(80)
+  payload        Json
+  status         OutboxStatus @default(QUEUED)
+  attemptCount   Int          @default(0)
+  availableAt    DateTime     @default(now()) @db.Timestamptz(6)
+  leaseExpiresAt DateTime?    @db.Timestamptz(6)
+  deliveredAt    DateTime?    @db.Timestamptz(6)
+  lastErrorCode  String?      @db.VarChar(80)
+  createdAt      DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @db.Timestamptz(6)
+
+  @@index([status, availableAt])
+  @@index([status, leaseExpiresAt])
+}
+
+model AuditEvent {
+  id           String      @id @default(uuid())
+  workspaceId  String
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actorRole    PersonaRole
+  action       String      @db.VarChar(100)
+  resourceType String      @db.VarChar(80)
+  resourceId   String      @db.VarChar(80)
+  requestId    String      @db.VarChar(80)
+  metadata     Json?
+  createdAt    DateTime    @default(now()) @db.Timestamptz(6)
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, resourceType, resourceId])
+}
+
+model IdempotencyKey {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  operation   String    @db.VarChar(80)
+  key         String    @db.VarChar(100)
+  fingerprint String    @db.VarChar(64)
+  response    Json
+  statusCode  Int
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  expiresAt   DateTime  @db.Timestamptz(6)
+
+  @@unique([workspaceId, operation, key])
+  @@index([expiresAt])
+}

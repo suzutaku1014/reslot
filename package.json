@@ -1,0 +1,58 @@
+{
+	"name": "reslot",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"lint": "biome check .",
+		"format": "biome check --write .",
+		"type-check": "tsc --noEmit",
+		"test": "vitest run",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test:e2e": "playwright test",
+		"postinstall": "prisma generate",
+		"db:generate": "prisma generate",
+		"db:migrate": "prisma migrate dev",
+		"db:deploy": "prisma migrate deploy",
+		"db:seed": "tsx prisma/seed.ts"
+	},
+	"dependencies": {
+		"@hono/zod-openapi": "^1.2.0",
+		"@prisma/adapter-pg": "^7.9.1",
+		"@prisma/client": "^7.9.1",
+		"hono": "^4.12.34",
+		"lucide-react": "^0.562.0",
+		"next": "16.2.12",
+		"pg": "^8.16.3",
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0",
+		"zod": "^4.3.5"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.7",
+		"@playwright/test": "^1.57.0",
+		"@testing-library/dom": "^10.4.1",
+		"@testing-library/jest-dom": "6.9.1",
+		"@testing-library/react": "^16.3.1",
+		"@types/node": "^22.19.5",
+		"@types/pg": "^8.15.6",
+		"@types/react": "19.2.2",
+		"@types/react-dom": "19.2.2",
+		"@vitejs/plugin-react": "^5.1.2",
+		"@vitest/coverage-v8": "^4.1.10",
+		"dotenv": "^17.2.3",
+		"jsdom": "^27.4.0",
+		"prisma": "^7.9.1",
+		"tsx": "^4.21.0",
+		"typescript": "5.9.2",
+		"vite-tsconfig-paths": "^6.1.1",
+		"vitest": "^4.1.10"
+	},
+	"packageManager": "pnpm@9.0.0",
+	"engines": {
+		"node": ">=22"
+	}
+}

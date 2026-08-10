@@ -1,0 +1,17 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"formatter": { "indentStyle": "tab", "lineWidth": 88 },
+	"linter": { "enabled": true, "rules": { "preset": "recommended" } },
+	"files": {
+		"includes": [
+			"**",
+			"!pnpm-lock.yaml",
+			"!**/.next",
+			"!**/.pnpm-store",
+			"!**/.vercel",
+			"!**/coverage",
+			"!**/src/generated"
+		]
+	}
+}
