@@ -58,14 +58,65 @@ type Snapshot = {
 };
 
 const roles: Array<{ value: Role; label: string; description: string }> = [
-	{ value: "CUSTOMER", label: "Customer", description: "Request a new time" },
-	{ value: "PROVIDER", label: "Provider", description: "Review candidates" },
-	{ value: "ADMIN", label: "Admin", description: "Inspect operations" },
+	{ value: "CUSTOMER", label: "利用者", description: "日程変更を申請" },
+	{ value: "PROVIDER", label: "担当者", description: "候補日時を確認" },
+	{ value: "ADMIN", label: "管理者", description: "運用状況を確認" },
 ];
+
+const statusLabels: Record<string, string> = {
+	SCHEDULED: "予約済み",
+	PENDING: "確認待ち",
+	ACCEPTED: "承認済み",
+	REJECTED: "却下",
+	DELIVERED: "配信済み",
+	FAILED: "失敗",
+	DEAD_LETTER: "要確認",
+	PROCESSING: "処理中",
+};
+
+const eventLabels: Record<string, string> = {
+	"reschedule.requested": "日程変更の申請",
+	"reschedule.accepted": "日程変更の承認",
+	"reschedule.rejected": "日程変更の却下",
+	"demo.session_created": "デモセッション作成",
+};
+
+const notificationLabels: Record<string, string> = {
+	"New change request": "新しい日程変更申請",
+	"New time confirmed": "新しい日時が確定しました",
+	"Change request declined": "日程変更は承認されませんでした",
+	"A customer proposed new appointment times.": "利用者から候補日時が届きました。",
+	"Your appointment has been moved to the selected time.":
+		"予約を選択された日時へ変更しました。",
+	"The provider could not accept the proposed times.":
+		"担当者が候補日時を承認できませんでした。",
+};
+
+const errorLabels: Record<string, string> = {
+	INTERNAL_ERROR: "サーバーで問題が発生しました。時間をおいてもう一度お試しください。",
+	DEMO_CAPACITY_REACHED: "デモが混み合っています。1分ほど待ってからお試しください。",
+	SESSION_REQUIRED: "デモを開始してください。",
+	SESSION_EXPIRED: "デモの有効期限が切れました。もう一度開始してください。",
+	APPOINTMENT_NOT_FOUND: "対象の予約が見つかりませんでした。",
+	REQUEST_ALREADY_PENDING: "この予約には確認待ちの申請があります。",
+	REQUEST_NOT_FOUND: "日程変更の申請が見つかりませんでした。",
+	STALE_DECISION: "申請の状態が更新されています。画面を更新してお試しください。",
+	INVALID_CANDIDATE: "この申請に含まれる候補日時を選択してください。",
+	PROVIDER_CONFLICT: "その時間には別の予約が入っています。",
+	OUTBOX_NOT_RETRYABLE: "この通知イベントは再試行できません。",
+};
+
+function translate(value: string, dictionary: Record<string, string>) {
+	return dictionary[value] ?? value;
+}
 
 async function readJson<T>(response: Response): Promise<T> {
 	const body = await response.json();
-	if (!response.ok) throw new Error(body.error?.message ?? "The request failed.");
+	if (!response.ok)
+		throw new Error(
+			errorLabels[body.error?.code] ??
+				"処理に失敗しました。時間をおいてもう一度お試しください。",
+		);
 	return body as T;
 }
 
@@ -101,7 +152,7 @@ export function DemoApp() {
 		await run(async () => {
 			await readJson(await fetch("/api/demo/sessions", { method: "POST" }));
 			await refresh();
-		}, "The demo could not start.");
+		}, "デモを開始できませんでした。");
 	}
 
 	async function changeRole(role: Role) {
@@ -115,7 +166,7 @@ export function DemoApp() {
 				}),
 			);
 			await refresh();
-		}, "The role could not change.");
+		}, "表示する役割を切り替えられませんでした。");
 	}
 
 	async function submitRequest() {
@@ -146,7 +197,7 @@ export function DemoApp() {
 			setCandidateTimes([{ id: "candidate-1", value: "" }]);
 			setNote("");
 			await refresh();
-		}, "The request could not be created.");
+		}, "日程変更を申請できませんでした。");
 	}
 
 	async function decide(
@@ -171,14 +222,14 @@ export function DemoApp() {
 				}),
 			);
 			await refresh();
-		}, "The decision could not be saved.");
+		}, "回答を保存できませんでした。");
 	}
 
 	async function processNow() {
 		await run(async () => {
 			await readJson(await fetch("/api/admin/outbox/process", { method: "POST" }));
 			await refresh();
-		}, "The outbox could not be processed.");
+		}, "通知キューを処理できませんでした。");
 	}
 
 	async function retryEvent(outboxId: string) {
@@ -187,7 +238,7 @@ export function DemoApp() {
 				await fetch(`/api/admin/outbox/${outboxId}/retry`, { method: "POST" }),
 			);
 			await refresh();
-		}, "The event could not be retried.");
+		}, "通知を再試行できませんでした。");
 	}
 
 	if (!snapshot) return <Landing busy={busy} error={error} startDemo={startDemo} />;
@@ -195,17 +246,24 @@ export function DemoApp() {
 	return (
 		<main className="app-shell">
 			<header className="app-header">
-				<div>
+				<div className="brand-lockup">
 					<span className="wordmark">ReSlot</span>
-					<span className="demo-badge">Fictional demo</span>
+					<span className="demo-badge">架空データのデモ</span>
 				</div>
 				<a className="source-link" href="https://github.com/suzutaku1014/reslot">
-					Source ↗
+					GitHub
 				</a>
 			</header>
 			<div className="app-layout">
-				<aside className="role-panel" aria-label="Choose a persona">
-					<p className="panel-label">View as</p>
+				<aside className="role-panel" aria-label="表示する役割を選択">
+					<div className="sidebar-brand">
+						<span className="sidebar-mark">R</span>
+						<div>
+							<strong>ReSlot</strong>
+							<small>日程変更ポータル</small>
+						</div>
+					</div>
+					<p className="panel-label">表示する役割</p>
 					{roles.map((role) => (
 						<button
 							key={role.value}
@@ -213,31 +271,32 @@ export function DemoApp() {
 							className={snapshot.role === role.value ? "role active" : "role"}
 							onClick={() => changeRole(role.value)}
 							disabled={busy}
+							aria-pressed={snapshot.role === role.value}
 						>
 							<strong>{role.label}</strong>
 							<span>{role.description}</span>
 						</button>
 					))}
 					<p className="expiry-note">
-						Workspace data is isolated and automatically expires after one hour.
+						このワークスペースは分離され、作成から1時間後に自動で削除されます。
 					</p>
 				</aside>
 				<section className="workspace">
 					<div className="workspace-heading">
 						<div>
 							<p className="eyebrow">
-								{roles.find((role) => role.value === snapshot.role)?.label} workspace
+								{roles.find((role) => role.value === snapshot.role)?.label}画面
 							</p>
 							<h1>
 								{snapshot.role === "ADMIN"
-									? "Operational overview"
+									? "運用状況"
 									: snapshot.role === "PROVIDER"
-										? "Change requests"
-										: "Upcoming appointments"}
+										? "日程変更の申請"
+										: "今後の予約"}
 							</h1>
 						</div>
 						<span className="healthy">
-							<i /> Demo active
+							<i /> デモ実行中
 						</span>
 					</div>
 					{error && (
@@ -302,51 +361,74 @@ function Landing({
 	return (
 		<main className="landing-shell">
 			<nav className="topbar">
-				<a className="wordmark" href="/">
-					ReSlot
+				<a className="landing-brand" href="/">
+					<span className="sidebar-mark">R</span>
+					<span className="wordmark">ReSlot</span>
 				</a>
 				<a className="source-link" href="https://github.com/suzutaku1014/reslot">
-					GitHub ↗
+					GitHubで見る ↗
 				</a>
 			</nav>
 			<section className="hero">
-				<p className="eyebrow">Open-source workflow reference</p>
-				<h1>
-					Rescheduling,
-					<br />
-					without the loose ends.
-				</h1>
-				<p className="lede">
-					A small appointment change reveals the hard parts of software: permissions,
-					concurrency, durable delivery, and operational visibility.
-				</p>
-				<div className="actions">
-					<button type="button" onClick={startDemo} disabled={busy}>
-						{busy ? "Preparing workspace…" : "Start fictional demo"}
-					</button>
-					<span>No sign-up · expires in 1 hour</span>
-				</div>
-				{error && (
-					<p className="error-banner" role="alert">
-						{error}
+				<div className="hero-copy">
+					<p className="eyebrow">オープンソースの業務アプリ実装例</p>
+					<h1>
+						日程変更を、
+						<br />
+						確実に。
+					</h1>
+					<p className="lede">
+						申請、承認、通知、監査まで。小さな日程変更に必要な業務フローを、
+						ひとつのWebアプリで体験できます。
 					</p>
-				)}
+					<div className="actions">
+						<button type="button" onClick={startDemo} disabled={busy}>
+							{busy ? "準備しています…" : "デモをはじめる"}
+						</button>
+						<span>登録不要・データは1時間で自動削除</span>
+					</div>
+					{error && (
+						<p className="error-banner" role="alert">
+							{error}
+						</p>
+					)}
+				</div>
+				<div className="hero-preview" aria-hidden="true">
+					<div className="preview-top">
+						<span />
+						<span />
+						<span />
+					</div>
+					<div className="preview-layout">
+						<div className="preview-sidebar">
+							<b />
+							<b />
+							<b />
+						</div>
+						<div className="preview-content">
+							<i />
+							<strong />
+							<p />
+							<p />
+						</div>
+					</div>
+				</div>
 			</section>
-			<section className="trust-grid" aria-label="Engineering highlights">
+			<section className="trust-grid" aria-label="技術的な特長">
 				<article>
 					<ShieldCheck aria-hidden="true" />
-					<strong>Scoped by design</strong>
-					<span>Opaque session, server-side role and workspace resolution.</span>
+					<strong>安全な権限分離</strong>
+					<span>セッション、役割、データ範囲をサーバー側で検証します。</span>
 				</article>
 				<article>
 					<Database aria-hidden="true" />
-					<strong>Atomic changes</strong>
-					<span>Business state, audit, and outbox commit together.</span>
+					<strong>一貫したデータ更新</strong>
+					<span>予約、監査ログ、通知キューをひとつの処理で確定します。</span>
 				</article>
 				<article>
 					<Bell aria-hidden="true" />
-					<strong>Observable delivery</strong>
-					<span>Notification failure is retryable, never invisible.</span>
+					<strong>追跡できる通知</strong>
+					<span>通知の成功・失敗を記録し、安全に再試行できます。</span>
 				</article>
 			</section>
 		</main>
@@ -367,19 +449,19 @@ function Notifications({ items }: { items: Snapshot["notifications"] }) {
 		<section className="notification-panel" aria-labelledby="notifications-heading">
 			<div className="ops-heading">
 				<div>
-					<p className="eyebrow">In-app delivery</p>
-					<h2 id="notifications-heading">Notifications</h2>
+					<p className="eyebrow">アプリ内通知</p>
+					<h2 id="notifications-heading">お知らせ</h2>
 				</div>
 			</div>
 			{items.length === 0 ? (
-				<p className="muted-copy">No delivered notifications yet.</p>
+				<p className="muted-copy">お知らせはまだありません。</p>
 			) : (
 				items.map((item) => (
 					<article className="notification" key={item.id}>
 						<Bell aria-hidden="true" />
 						<div>
-							<strong>{item.title}</strong>
-							<p>{item.body}</p>
+							<strong>{translate(item.title, notificationLabels)}</strong>
+							<p>{translate(item.body, notificationLabels)}</p>
 						</div>
 					</article>
 				))
@@ -402,15 +484,15 @@ function AdminOperations({
 	return (
 		<div className="operations">
 			<div className="metrics">
-				<Metric label="Reschedule requests" value={snapshot._count.requests} />
-				<Metric label="Outbox events" value={snapshot._count.outbox} />
-				<Metric label="Audit events" value={snapshot._count.auditEvents} />
+				<Metric label="日程変更申請" value={snapshot._count.requests} />
+				<Metric label="通知イベント" value={snapshot._count.outbox} />
+				<Metric label="監査イベント" value={snapshot._count.auditEvents} />
 			</div>
 			<section className="ops-section">
 				<div className="ops-heading">
 					<div>
-						<p className="eyebrow">Delivery</p>
-						<h2>Notification outbox</h2>
+						<p className="eyebrow">通知配信</p>
+						<h2>通知キュー</h2>
 					</div>
 					<button
 						className="primary-action"
@@ -418,27 +500,25 @@ function AdminOperations({
 						disabled={busy || snapshot.outbox.length === 0}
 						onClick={processNow}
 					>
-						Process now
+						今すぐ処理
 					</button>
 				</div>
 				{snapshot.outbox.length === 0 ? (
-					<p className="muted-copy">No delivery events yet.</p>
+					<p className="muted-copy">通知イベントはまだありません。</p>
 				) : (
 					<div className="ops-table">
 						{snapshot.outbox.map((event) => (
 							<div className="ops-row" key={event.id}>
-								<span>{event.eventType}</span>
-								<code>{event.status}</code>
-								<small>
-									{event.attemptCount} attempt{event.attemptCount === 1 ? "" : "s"}
-								</small>
+								<span>{translate(event.eventType, eventLabels)}</span>
+								<code>{translate(event.status, statusLabels)}</code>
+								<small>{event.attemptCount}回実行</small>
 								{["FAILED", "DEAD_LETTER"].includes(event.status) && (
 									<button
 										className="text-action"
 										type="button"
 										onClick={() => retryEvent(event.id)}
 									>
-										Retry
+										再試行
 									</button>
 								)}
 							</div>
@@ -449,15 +529,15 @@ function AdminOperations({
 			<section className="ops-section">
 				<div className="ops-heading">
 					<div>
-						<p className="eyebrow">Immutable trail</p>
-						<h2>Recent audit events</h2>
+						<p className="eyebrow">変更履歴</p>
+						<h2>最近の監査イベント</h2>
 					</div>
 				</div>
 				<div className="ops-table">
 					{snapshot.auditEvents.map((event) => (
 						<div className="ops-row audit" key={event.id}>
-							<span>{event.action}</span>
-							<code>{event.actorRole}</code>
+							<span>{translate(event.action, eventLabels)}</span>
+							<code>{roles.find((role) => role.value === event.actorRole)?.label}</code>
 							<small>{event.requestId.slice(0, 8)}</small>
 						</div>
 					))}
@@ -476,9 +556,9 @@ function AppointmentCard({
 	onRequest: () => void;
 	hasPending: boolean;
 }) {
-	const date = new Intl.DateTimeFormat("en", {
+	const date = new Intl.DateTimeFormat("ja-JP", {
 		weekday: "short",
-		month: "short",
+		month: "long",
 		day: "numeric",
 		hour: "numeric",
 		minute: "2-digit",
@@ -489,9 +569,13 @@ function AppointmentCard({
 				<CalendarDays aria-hidden="true" />
 			</div>
 			<div className="appointment-copy">
-				<p>{appointment.service.name}</p>
+				<p>
+					{appointment.service.name === "Project consultation"
+						? "プロジェクト相談"
+						: appointment.service.name}
+				</p>
 				<h2>{date}</h2>
-				<span>with {appointment.provider.displayName}</span>
+				<span>担当：{appointment.provider.displayName}</span>
 			</div>
 			<button
 				className="secondary-action"
@@ -499,7 +583,7 @@ function AppointmentCard({
 				onClick={onRequest}
 				disabled={hasPending}
 			>
-				{hasPending ? "Pending" : "Request change"}
+				{hasPending ? "確認待ち" : "日程を変更"}
 			</button>
 		</article>
 	);
@@ -523,14 +607,17 @@ function RequestForm({
 	cancel: () => void;
 }) {
 	return (
-		<section className="request-form" aria-label="Request a new appointment time">
+		<section className="request-form" aria-label="新しい予約日時を申請">
 			<div>
-				<p className="eyebrow">New request</p>
-				<h2>Offer up to three times</h2>
+				<p className="eyebrow">日程変更申請</p>
+				<h2>候補日時を入力してください</h2>
+				<p className="form-description">
+					候補は3つまで追加できます。各候補は1時間枠で登録されます。
+				</p>
 			</div>
 			{candidateTimes.map((candidate, index) => (
 				<label key={candidate.id}>
-					Candidate {index + 1}
+					候補 {index + 1}
 					<input
 						type="datetime-local"
 						value={candidate.value}
@@ -557,21 +644,21 @@ function RequestForm({
 						])
 					}
 				>
-					+ Add another time
+					＋ 候補を追加
 				</button>
 			)}
 			<label>
-				Optional note
+				メモ（任意）
 				<textarea
 					maxLength={500}
 					value={note}
 					onChange={(event) => setNote(event.target.value)}
-					placeholder="Add useful context, not personal information."
+					placeholder="担当者へ伝えたいことを入力してください（個人情報は入力しないでください）"
 				/>
 			</label>
 			<div className="form-actions">
 				<button className="secondary-action" type="button" onClick={cancel}>
-					Cancel
+					キャンセル
 				</button>
 				<button
 					className="primary-action"
@@ -579,7 +666,7 @@ function RequestForm({
 					onClick={submit}
 					disabled={busy || candidateTimes.some((candidate) => !candidate.value)}
 				>
-					Send request
+					申請する
 				</button>
 			</div>
 		</section>
@@ -605,8 +692,8 @@ function RequestInbox({
 		return (
 			<div className="empty-state">
 				<Bell aria-hidden="true" />
-				<h2>No requests waiting</h2>
-				<p>Customer proposals will appear here.</p>
+				<h2>確認待ちの申請はありません</h2>
+				<p>利用者から候補日時が届くと、ここに表示されます。</p>
 			</div>
 		);
 	return (
@@ -614,8 +701,12 @@ function RequestInbox({
 			{pending.map((request) => (
 				<article className="request-card" key={request.id}>
 					<div>
-						<p className="eyebrow">Change requested</p>
-						<h2>{request.appointment.service.name}</h2>
+						<p className="eyebrow">日程変更の申請</p>
+						<h2>
+							{request.appointment.service.name === "Project consultation"
+								? "プロジェクト相談"
+								: request.appointment.service.name}
+						</h2>
 						{request.note && <p className="request-note">“{request.note}”</p>}
 					</div>
 					<div className="candidate-list">
@@ -629,19 +720,19 @@ function RequestInbox({
 								}
 							>
 								<span>
-									{new Intl.DateTimeFormat("en", {
+									{new Intl.DateTimeFormat("ja-JP", {
 										weekday: "short",
-										month: "short",
+										month: "long",
 										day: "numeric",
 									}).format(new Date(candidate.startsAt))}
 								</span>
 								<strong>
-									{new Intl.DateTimeFormat("en", {
+									{new Intl.DateTimeFormat("ja-JP", {
 										hour: "numeric",
 										minute: "2-digit",
 									}).format(new Date(candidate.startsAt))}
 								</strong>
-								<em>Accept</em>
+								<em>この日時で承認</em>
 							</button>
 						))}
 					</div>
@@ -651,7 +742,7 @@ function RequestInbox({
 						disabled={busy}
 						onClick={() => decide(request.id, request.version, "reject")}
 					>
-						Reject all candidates
+						すべての候補を却下
 					</button>
 				</article>
 			))}

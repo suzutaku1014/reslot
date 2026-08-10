@@ -38,12 +38,10 @@ describe("DemoApp", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		render(<DemoApp />);
-		fireEvent.click(screen.getByRole("button", { name: "Start fictional demo" }));
+		fireEvent.click(screen.getByRole("button", { name: "デモをはじめる" }));
 
-		await waitFor(() =>
-			expect(screen.getByText("Upcoming appointments")).toBeInTheDocument(),
-		);
-		expect(screen.getByText("Project consultation")).toBeInTheDocument();
+		await waitFor(() => expect(screen.getByText("今後の予約")).toBeInTheDocument());
+		expect(screen.getByText("プロジェクト相談")).toBeInTheDocument();
 		expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/demo/sessions", {
 			method: "POST",
 		});
