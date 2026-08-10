@@ -43,6 +43,31 @@ export async function getDemoSnapshot(workspaceId: string, role: PersonaRole) {
 					},
 				},
 			},
+			outbox: {
+				orderBy: { createdAt: "desc" },
+				take: 20,
+				select: {
+					id: true,
+					eventType: true,
+					status: true,
+					attemptCount: true,
+					lastErrorCode: true,
+					createdAt: true,
+				},
+			},
+			auditEvents: {
+				orderBy: { createdAt: "desc" },
+				take: 20,
+				select: {
+					id: true,
+					actorRole: true,
+					action: true,
+					resourceType: true,
+					resourceId: true,
+					requestId: true,
+					createdAt: true,
+				},
+			},
 			_count: { select: { requests: true, outbox: true, auditEvents: true } },
 		},
 	});

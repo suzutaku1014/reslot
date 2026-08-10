@@ -6,6 +6,7 @@ import {
 } from "@/server/auth/session";
 import { getDemoSnapshot } from "@/server/demo/snapshot";
 import { ApiError } from "@/server/http/errors";
+import { processOutbox, retryOutboxEvent } from "@/server/outbox/worker";
 import {
 	createRescheduleRequest,
 	resolveRescheduleRequest,
@@ -56,6 +57,46 @@ api.openapi(
 	}),
 	(context) => context.json({ status: "ok" as const }, 200),
 );
+
+api.post("/admin/outbox/process", async (context) => {
+	const session = await requireDemoSession(context);
+	if (session.activeRole !== "ADMIN")
+		throw new ApiError(
+			403,
+			"ROLE_FORBIDDEN",
+			"This action requires the admin persona.",
+		);
+	return context.json({ results: await processOutbox(10, session.workspace.id) });
+});
+
+api.post("/admin/outbox/:outboxId/retry", async (context) => {
+	const session = await requireDemoSession(context);
+	if (session.activeRole !== "ADMIN")
+		throw new ApiError(
+			403,
+			"ROLE_FORBIDDEN",
+			"This action requires the admin persona.",
+		);
+	const retried = await retryOutboxEvent(
+		session.workspace.id,
+		context.req.param("outboxId"),
+		context.get("requestId"),
+	);
+	if (!retried)
+		throw new ApiError(409, "OUTBOX_NOT_RETRYABLE", "This event is not retryable.");
+	return context.json({ status: "QUEUED" });
+});
+
+api.post("/internal/outbox/process", async (context) => {
+	const authorization = context.req.header("authorization");
+	if (
+		!process.env.CRON_SECRET ||
+		authorization !== `Bearer ${process.env.CRON_SECRET}`
+	) {
+		throw new ApiError(401, "INVALID_CRON_SECRET", "Cron authorization failed.");
+	}
+	return context.json({ results: await processOutbox() });
+});
 
 const candidateSchema = z.object({
 	startsAt: z.iso.datetime(),
