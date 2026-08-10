@@ -1,11 +1,11 @@
-# Changelog
+# 変更履歴
 
 ## [1.0.0] - 2026-08-10
 
-### Added
+### 追加
 
-- Expiring fictional demo workspaces with Customer, Provider, and Admin personas.
-- Transactional appointment-rescheduling requests with one to three candidates.
-- Serializable, idempotent provider decisions and database overlap protection.
-- Durable notification outbox, retry/dead-letter behavior, and audit visibility.
-- Public CI, security scanning, runbook, threat model, and end-to-end verification.
+- 利用者、担当者、管理者の役割を備えた、有効期限付きの架空データ用デモ環境
+- 1〜3件の候補日時を扱う、トランザクション内の日程変更申請
+- 直列化可能なトランザクション、冪等性、データベースの重複予約防止を備えた担当者の回答処理
+- 永続的な通知Outbox、再試行・Dead Letter処理、監査履歴の可視化
+- 公開CI、セキュリティスキャン、運用手順、脅威モデル、E2E検証

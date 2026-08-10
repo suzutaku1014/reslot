@@ -1,19 +1,13 @@
-# Security policy
+# セキュリティポリシー
 
-## Reporting a vulnerability
+## 脆弱性の報告
 
-Please do not open a public issue for a suspected vulnerability. Use GitHub's
-private vulnerability reporting feature for this repository. If that feature
-is unavailable, contact the maintainer through the address listed on their
-GitHub profile without including secrets or real user data in the first
-message.
+脆弱性が疑われる場合は、公開Issueを作成しないでください。このリポジトリのGitHub Private Vulnerability Reportingを利用してください。利用できない場合は、秘密情報や実データを最初のメッセージへ含めず、メンテナーのGitHubプロフィールに記載された連絡先へ報告してください。
 
-## Supported version
+## サポート対象
 
-Only the latest release and current `main` branch are supported.
+最新リリースと現在の`main`ブランチだけをサポートします。
 
-## Demo data
+## デモデータ
 
-The hosted demo is for fictional data only. Do not submit personal data,
-credentials, confidential URLs, or production information. Demo workspaces
-expire automatically and are not a durable storage service.
+公開デモは架空データ専用です。個人情報、認証情報、機密URL、本番環境の情報を入力しないでください。デモ用ワークスペースは自動的に失効するため、永続ストレージとしては利用できません。

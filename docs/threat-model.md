@@ -1,31 +1,29 @@
-# Threat model
+# 脅威モデル
 
-## Protected assets
+## 保護する対象
 
-- Isolation between demo workspaces
-- Integrity of appointment and request state
-- Availability of the public demo within a bounded cost
-- Vercel, Neon, GitHub, cron, and session secrets
-- Audit evidence needed to explain administrative and asynchronous actions
+- デモ用ワークスペース間の分離
+- 予約・申請状態の整合性
+- 費用を一定範囲に抑えた公開デモの可用性
+- Vercel、Neon、GitHub、Cron、セッションの秘密情報
+- 管理操作と非同期処理を説明するための監査証跡
 
-## Primary threats and controls
+## 主な脅威と対策
 
-| Threat | Control |
+| 脅威 | 対策 |
 | --- | --- |
-| Guessing another workspace resource ID | Server-side workspace scope on every query; return 404 |
-| Customer invoking provider/admin actions | Persona and resource authorization in API middleware/services |
-| Double decision or stale browser state | Version compare-and-swap and transactional locking |
-| Provider double-booking | PostgreSQL overlap constraint plus conflict response |
-| Duplicate form submission | Idempotency key unique within workspace and operation |
-| Session theft | High-entropy token, hash at rest, secure HTTP-only cookie, one-hour expiry |
-| CSRF | SameSite cookie and exact Origin verification for unsafe methods |
-| Public-demo abuse | Session/mutation quotas, atomic rate limits, bounded input, automatic cleanup |
-| Outbox duplicate delivery | Deterministic dedupe key and atomic worker claim |
-| Secret or personal-data leakage | No real PII fields, redacted structured logs, secret scanning |
-| SSRF or malicious attachment | No server-side URL fetch and no uploads in v1 |
+| 他ワークスペースのリソースID推測 | すべてのクエリをサーバー側でワークスペースに限定し、対象外は404を返す |
+| 利用者による担当者・管理者操作の実行 | APIミドルウェアとサービスで役割・対象リソースを認可 |
+| 二重回答または古い画面からの回答 | バージョンのCompare-and-Swapとトランザクションロック |
+| 担当者の二重予約 | PostgreSQLの時間範囲排他制約と競合レスポンス |
+| フォームの二重送信 | ワークスペース・操作単位で一意なIdempotency Key |
+| セッション窃取 | 高エントロピーなトークン、保存時ハッシュ化、Secure・HTTP-only Cookie、1時間の有効期限 |
+| CSRF | SameSite Cookieと更新系リクエストのOrigin完全一致検証 |
+| 公開デモの濫用 | セッション・更新回数制限、原子的なRate Limit、入力上限、自動削除 |
+| Outboxの重複配信 | 決定的な重複排除キーとワーカーによる原子的な取得 |
+| 秘密情報・個人情報の漏えい | 実PII用フィールドを持たない設計、構造化ログの秘匿化、Secret Scanning |
+| SSRF・悪意ある添付ファイル | v1ではサーバー側URL取得とアップロードを提供しない |
 
-## Not claimed
+## 保証しない範囲
 
-This document defines the v1 scope; it does not claim that the system is
-universally secure. Cloud account configuration, provider retention, backup,
-and production observations must be verified separately before release.
+この文書はv1の範囲を定義するもので、あらゆる環境での安全性を保証するものではありません。クラウドアカウント設定、各事業者のデータ保持、バックアップ、本番環境の観測結果は、リリース前に別途確認する必要があります。
