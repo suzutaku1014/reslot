@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "next dev",
-		"build": "next build",
+		"build": "prisma generate && next build",
 		"start": "next start",
 		"lint": "biome check .",
 		"format": "biome check --write .",
@@ -52,7 +52,7 @@
 		"vite-tsconfig-paths": "^6.1.1",
 		"vitest": "^4.1.10"
 	},
-	"packageManager": "pnpm@9.0.0",
+	"packageManager": "pnpm@11.16.0",
 	"engines": {
 		"node": ">=22"
 	}

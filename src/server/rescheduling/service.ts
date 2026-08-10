@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
+import { z } from "zod";
 import { type PersonaRole, Prisma } from "@/generated/prisma";
 import { prisma } from "@/server/db";
 import { ApiError } from "@/server/http/errors";
 
 type CandidateInput = { startsAt: Date; endsAt: Date };
 type Actor = { workspaceId: string; role: PersonaRole; requestId: string };
+const mutationResponseSchema = z.object({ requestId: z.string(), status: z.string() });
 
 function requireRole(actual: PersonaRole, expected: PersonaRole) {
 	if (actual !== expected) {
@@ -58,7 +60,7 @@ async function findStoredResponse(
 			"This idempotency key was used with a different request.",
 		);
 	}
-	return stored.response;
+	return mutationResponseSchema.parse(stored.response);
 }
 
 async function rememberResponse(
@@ -133,13 +135,14 @@ export async function createRescheduleRequest(
 					note: input.note,
 					originalStartsAt: appointment.startsAt,
 					originalEndsAt: appointment.endsAt,
-					candidates: {
-						create: input.candidates.map((candidate) => ({
-							workspaceId: actor.workspaceId,
-							...candidate,
-						})),
-					},
 				},
+			});
+			await database.candidateSlot.createMany({
+				data: input.candidates.map((candidate) => ({
+					workspaceId: actor.workspaceId,
+					requestId: request.id,
+					...candidate,
+				})),
 			});
 			await database.notificationOutbox.create({
 				data: {
