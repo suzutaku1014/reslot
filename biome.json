@@ -11,6 +11,8 @@
 			"!**/.pnpm-store",
 			"!**/.vercel",
 			"!**/coverage",
+			"!**/test-results",
+			"!**/playwright-report",
 			"!**/src/generated"
 		]
 	}
