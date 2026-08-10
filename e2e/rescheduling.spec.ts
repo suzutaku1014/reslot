@@ -16,7 +16,7 @@ test("customer request, provider decision, and admin delivery stay observable", 
 	await page.getByRole("button", { name: "申請する" }).click();
 	await expect(page.getByRole("button", { name: "確認待ち" })).toBeVisible();
 
-	await page.getByRole("button", { name: "担当者 候補日時を確認" }).click();
+	await page.getByRole("button", { name: "担当者", exact: true }).click();
 	await expect(page.getByRole("heading", { name: "日程変更の申請" })).toBeVisible();
 	await page
 		.getByRole("button", { name: /この日時で承認/ })
@@ -26,7 +26,7 @@ test("customer request, provider decision, and admin delivery stay observable", 
 		page.getByRole("heading", { name: "確認待ちの申請はありません" }),
 	).toBeVisible();
 
-	await page.getByRole("button", { name: "管理者 運用状況を確認" }).click();
+	await page.getByRole("button", { name: "管理者", exact: true }).click();
 	await expect(page.getByRole("heading", { name: "通知キュー" })).toBeVisible();
 	await page.getByRole("button", { name: "今すぐ処理" }).click();
 	await expect(page.getByText("配信済み").first()).toBeVisible();

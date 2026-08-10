@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CalendarDays } from "lucide-react";
+import { Bell, ChevronRight, Menu, X } from "lucide-react";
 import { useCallback, useState } from "react";
 
 type Role = "CUSTOMER" | "PROVIDER" | "ADMIN";
@@ -57,10 +57,10 @@ type Snapshot = {
 	_count: { requests: number; outbox: number; auditEvents: number };
 };
 
-const roles: Array<{ value: Role; label: string; description: string }> = [
-	{ value: "CUSTOMER", label: "利用者", description: "日程変更を申請" },
-	{ value: "PROVIDER", label: "担当者", description: "候補日時を確認" },
-	{ value: "ADMIN", label: "管理者", description: "運用状況を確認" },
+const roles: Array<{ value: Role; label: string }> = [
+	{ value: "CUSTOMER", label: "利用者" },
+	{ value: "PROVIDER", label: "担当者" },
+	{ value: "ADMIN", label: "管理者" },
 ];
 
 const statusLabels: Record<string, string> = {
@@ -129,6 +129,7 @@ export function DemoApp() {
 		{ id: "candidate-1", value: "" },
 	]);
 	const [note, setNote] = useState("");
+	const [menuOpen, setMenuOpen] = useState(false);
 
 	const refresh = useCallback(async () => {
 		setSnapshot(
@@ -157,6 +158,7 @@ export function DemoApp() {
 
 	async function changeRole(role: Role) {
 		if (role === snapshot?.role) return;
+		setMenuOpen(false);
 		await run(async () => {
 			await readJson(
 				await fetch("/api/demo/role", {
@@ -246,58 +248,53 @@ export function DemoApp() {
 	return (
 		<main className="app-shell">
 			<header className="app-header">
-				<div className="brand-lockup">
-					<span className="wordmark">ReSlot</span>
-					<span className="demo-badge">架空データのデモ</span>
-				</div>
-				<a className="source-link" href="https://github.com/suzutaku1014/reslot">
-					GitHub
-				</a>
+				<span className="wordmark">ReSlot</span>
+				<button
+					type="button"
+					className="menu-toggle"
+					onClick={() => setMenuOpen((open) => !open)}
+					aria-label={menuOpen ? "メニューを閉じる" : "メニューを開く"}
+					aria-expanded={menuOpen}
+				>
+					{menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+				</button>
 			</header>
 			<div className="app-layout">
-				<aside className="role-panel" aria-label="表示する役割を選択">
+				<aside
+					className={menuOpen ? "role-panel open" : "role-panel"}
+					aria-label="メニュー"
+				>
 					<div className="sidebar-brand">
 						<span className="sidebar-mark">R</span>
-						<div>
-							<strong>ReSlot</strong>
-							<small>日程変更ポータル</small>
-						</div>
+						<strong>ReSlot</strong>
 					</div>
-					<p className="panel-label">表示する役割</p>
-					{roles.map((role) => (
-						<button
-							key={role.value}
-							type="button"
-							className={snapshot.role === role.value ? "role active" : "role"}
-							onClick={() => changeRole(role.value)}
-							disabled={busy}
-							aria-pressed={snapshot.role === role.value}
-						>
-							<strong>{role.label}</strong>
-							<span>{role.description}</span>
-						</button>
-					))}
-					<p className="expiry-note">
-						このワークスペースは分離され、作成から1時間後に自動で削除されます。
-					</p>
+					<nav className="role-navigation">
+						{roles.map((role) => (
+							<button
+								key={role.value}
+								type="button"
+								className={snapshot.role === role.value ? "role active" : "role"}
+								onClick={() => changeRole(role.value)}
+								disabled={busy}
+								aria-pressed={snapshot.role === role.value}
+							>
+								{role.label}
+							</button>
+						))}
+					</nav>
+					<a className="sidebar-source" href="https://github.com/suzutaku1014/reslot">
+						GitHub
+					</a>
 				</aside>
 				<section className="workspace">
 					<div className="workspace-heading">
-						<div>
-							<p className="eyebrow">
-								{roles.find((role) => role.value === snapshot.role)?.label}画面
-							</p>
-							<h1>
-								{snapshot.role === "ADMIN"
-									? "運用状況"
-									: snapshot.role === "PROVIDER"
-										? "日程変更の申請"
-										: "今後の予約"}
-							</h1>
-						</div>
-						<span className="healthy">
-							<i /> デモ実行中
-						</span>
+						<h1>
+							{snapshot.role === "ADMIN"
+								? "運用状況"
+								: snapshot.role === "PROVIDER"
+									? "日程変更の申請"
+									: "今後の予約"}
+						</h1>
 					</div>
 					{error && (
 						<p className="error-banner" role="alert">
@@ -360,57 +357,20 @@ function Landing({
 }) {
 	return (
 		<main className="landing-shell">
-			<nav className="topbar">
-				<a className="landing-brand" href="/">
-					<span className="sidebar-mark">R</span>
-					<span className="wordmark">ReSlot</span>
-				</a>
-				<a className="source-link" href="https://github.com/suzutaku1014/reslot">
-					GitHubで見る ↗
-				</a>
-			</nav>
-			<section className="hero">
-				<div className="hero-copy">
-					<h1>
-						日程変更を、
-						<br />
-						確実に。
-					</h1>
-					<p className="lede">
-						申請、承認、通知、監査まで。小さな日程変更に必要な業務フローを、
-						ひとつのWebアプリで体験できます。
+			<header className="landing-header">
+				<span className="sidebar-mark">R</span>
+				<span className="wordmark">ReSlot</span>
+			</header>
+			<section className="landing-card">
+				<h1>ReSlot</h1>
+				{error && (
+					<p className="error-banner" role="alert">
+						{error}
 					</p>
-					<div className="actions">
-						<button type="button" onClick={startDemo} disabled={busy}>
-							{busy ? "準備しています…" : "デモをはじめる"}
-						</button>
-					</div>
-					{error && (
-						<p className="error-banner" role="alert">
-							{error}
-						</p>
-					)}
-				</div>
-				<div className="hero-preview" aria-hidden="true">
-					<div className="preview-top">
-						<span />
-						<span />
-						<span />
-					</div>
-					<div className="preview-layout">
-						<div className="preview-sidebar">
-							<b />
-							<b />
-							<b />
-						</div>
-						<div className="preview-content">
-							<i />
-							<strong />
-							<p />
-							<p />
-						</div>
-					</div>
-				</div>
+				)}
+				<button type="button" onClick={startDemo} disabled={busy}>
+					{busy ? "準備しています…" : "デモをはじめる"}
+				</button>
 			</section>
 		</main>
 	);
@@ -545,10 +505,13 @@ function AppointmentCard({
 		minute: "2-digit",
 	}).format(new Date(appointment.startsAt));
 	return (
-		<article className="appointment-card">
-			<div className="calendar-icon">
-				<CalendarDays aria-hidden="true" />
-			</div>
+		<button
+			className="appointment-card"
+			type="button"
+			onClick={onRequest}
+			disabled={hasPending}
+			aria-label={hasPending ? "確認待ち" : "日程を変更"}
+		>
 			<div className="appointment-copy">
 				<p>
 					{appointment.service.name === "Project consultation"
@@ -558,15 +521,12 @@ function AppointmentCard({
 				<h2>{date}</h2>
 				<span>担当：{appointment.provider.displayName}</span>
 			</div>
-			<button
-				className="secondary-action"
-				type="button"
-				onClick={onRequest}
-				disabled={hasPending}
-			>
-				{hasPending ? "確認待ち" : "日程を変更"}
-			</button>
-		</article>
+			{hasPending ? (
+				<span className="pending-label">確認待ち</span>
+			) : (
+				<ChevronRight aria-hidden="true" />
+			)}
+		</button>
 	);
 }
 
