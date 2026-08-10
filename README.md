@@ -25,9 +25,9 @@ names, email addresses, payment information, or third-party credentials.
 
 ## Status
 
-Implementation is tracked in the [v1.0.0 milestone](https://github.com/suzutaku1014/reslot/milestone/1).
-The production URL is published after the database-backed release candidate
-passes CI and the browser smoke test.
+Try the fictional-data demo at [reslot-eight.vercel.app](https://reslot-eight.vercel.app).
+Release work is tracked in the
+[v1.0.0 milestone](https://github.com/suzutaku1014/reslot/milestone/1).
 
 ## Stack
 
